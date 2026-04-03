@@ -1,0 +1,517 @@
+---
+title: Templating
+description: Customize generated code using Mustache templates, Handlebars, or your own template engine.
+---
+
+OpenAPI Generator uses a template-driven pipeline: it transforms an OpenAPI document into an internal model, then applies that model to a set of template files to produce the final output. For the vast majority of customization scenarios—adding annotations, changing import statements, tweaking formatting—you only need to modify the template files. No Java code required.
+
+<Info>
+  If you need to add entirely new files to generated output, manipulate the OpenAPI document itself, or implement custom vendor extensions, see [Custom Generator](/customization/custom-generator) after reading this page.
+</Info>
+
+## How templates work
+
+Each generator ships with a directory of [Mustache](https://mustache.github.io/) templates, processed by [jmustache](https://github.com/samskivert/jmustache). The generator builds a data model from your OpenAPI spec (normalizing OpenAPI 2.0 and 3.x into the same internal structure), then applies each template file against that model to produce output files.
+
+The three primary template roles are:
+
+| Template type | Produced output |
+|---|---|
+| API templates (`api.mustache`) | One file per API tag/operation group |
+| Model templates (`model.mustache`) | One file per schema/model |
+| Supporting files (`README.mustache`, config files, etc.) | One file total, may or may not be templated |
+
+From version 4.0.0 onward, OpenAPI Generator also supports experimental **Handlebars** and user-defined **custom template engines** via plugins.
+
+## Retrieving built-in templates
+
+Before modifying templates you need a local copy of them. There are two ways to get them.
+
+### Using the CLI (v5.0.0+)
+
+The `author template` command extracts embedded templates for any generator:
+
+```bash
+openapi-generator author template -g java --library webclient
+```
+
+This drops the templates into your current directory, ready to edit.
+
+### Manually (pre-5.0.0 or for full control)
+
+Find the `embeddedTemplateDir` assignment in the generator's source class. For the C# generator it reads:
+
+```java
+embeddedTemplateDir = templateDir = "csharp";
+```
+
+The templates live under `modules/openapi-generator/src/main/resources/<embeddedTemplateDir>`. To pull the Java templates from the latest `master`:
+
+```bash
+mkdir -p ~/.openapi-generator/templates/ && cd $_
+curl -L https://api.github.com/repos/OpenAPITools/openapi-generator/tarball | tar xz
+mv $(ls)/modules/openapi-generator/src/main/resources/Java ./Java
+rm -rf OpenAPITools-openapi-generator-*
+```
+
+<Tip>
+  Run `git init && git add . && git commit -am 'initial'` inside the template directory so you can easily diff your changes against the originals.
+</Tip>
+
+## Using custom templates
+
+Point the generator at your local template directory with the `-t` / `--template` flag (CLI) or the equivalent plugin option:
+
+<CodeGroup>
+
+```bash CLI
+openapi-generator generate \
+  -g java \
+  --library resteasy \
+  -t ~/.openapi-generator/templates/Java \
+  -o ./out/myClient \
+  -i petstore.yaml
+```
+
+```xml Maven plugin
+<configuration>
+  <generatorName>java</generatorName>
+  <templateDirectory>${project.basedir}/src/main/openapi-templates</templateDirectory>
+</configuration>
+```
+
+```kotlin Gradle plugin
+openApiGenerate {
+  generatorName.set("java")
+  templateDir.set("$projectDir/src/main/openapi-templates")
+}
+```
+
+</CodeGroup>
+
+<Note>
+  You can only **override** existing templates, not add entirely new ones this way. To introduce new template files, use [user-defined templates via config](#user-defined-templates-via-config) or a [custom generator](/customization/custom-generator).
+</Note>
+
+### Template lookup order
+
+When a template file is needed, the generator searches in this order and uses the first match:
+
+1. User-customized library path (e.g. `custom_template/libraries/feign/model.mustache`)
+2. User-customized generator top-level path (e.g. `custom_template/model.mustache`)
+3. Embedded library path (e.g. `resources/Java/libraries/feign/model.mustache`)
+4. Embedded top-level path (e.g. `resources/Java/model.mustache`)
+5. Common embedded path (e.g. `resources/_common/model.mustache`)
+
+You only need to supply the files you want to change—everything else falls through to the built-in defaults.
+
+### Templates from the classpath
+
+Templates can also be loaded from a JAR on the classpath. Given a JAR with this structure:
+
+```
+└── src/main/resources/
+    └── templates/
+        └── htmlDocs/
+            ├── index.mustache
+            └── style.css.mustache
+```
+
+Invoke the generator with both JARs on the classpath:
+
+```bash
+java -cp template-classpath-example-1.0-SNAPSHOT.jar:openapi-generator-cli.jar \
+  org.openapitools.codegen.OpenAPIGenerator generate \
+  -i petstore.yaml \
+  -g html \
+  -o template-example \
+  -t templates/htmlDocs
+```
+
+The `-t` path is relative to the resource root of the JAR.
+
+## User-defined templates via config
+
+Since v5.0.0 you can declare additional template files in an external config file without building a custom generator. Add a `files` node alongside your `additionalProperties`:
+
+```yaml
+templateDir: my_custom_templates
+additionalProperties:
+  artifactId: kotlin-petstore-client
+  serializableModel: "true"
+  dateLibrary: java8
+files:
+  AUTHORS.md: {}
+  api_interfaces.mustache:
+    templateType: API
+    destinationFilename: Interface.kt
+  api.mustache:
+    templateType: API
+    destinationFilename: Impl.kt
+  other/check.mustache:
+    folder: scripts
+    destinationFilename: check.sh
+    templateType: SupportingFiles
+```
+
+| `templateType` | Files created |
+|---|---|
+| `API` | One file per API tag |
+| `APIDocs` | One doc file per API tag |
+| `APITests` | One test file per API tag |
+| `Model` | One file per model |
+| `ModelDocs` | One doc file per model |
+| `ModelTests` | One test file per model |
+| `SupportingFiles` (default) | A single file |
+
+Pass the config with `-c`:
+
+```bash
+openapi-generator generate -g kotlin -i spec.yaml -o outdir -c config.yaml
+```
+
+## Template structure example
+
+Here is a walkthrough of modifying the Java `resteasy` library templates to add AOP logging via [jcabi-aspects](https://github.com/jcabi/jcabi-aspects).
+
+<Steps>
+  <Step title="Add the dependency to build.gradle.mustache">
+    In `libraries/resteasy/build.gradle.mustache`, add the new compile dependency:
+
+    ```diff
+     dependencies {
+    +    compile "com.jcabi:jcabi-aspects:0.22.6"
+         compile "io.swagger:swagger-annotations:$swagger_annotations_version"
+    ```
+  </Step>
+  <Step title="Add the import to api.mustache">
+    At the top of `libraries/resteasy/api.mustache`:
+
+    ```diff
+     package {{package}};
+
+    +import com.jcabi.aspects.Loggable;
+     import {{invokerPackage}}.ApiException;
+    ```
+  </Step>
+  <Step title="Annotate the generated method">
+    Further down in `api.mustache`, locate the method signature and add the annotation:
+
+    ```diff
+    +  @Loggable(Loggable.INFO)
+       public {{#returnType}}{{{returnType}}} {{/returnType}}{{^returnType}}void {{/returnType}}{{operationId}}(
+           {{#allParams}}{{{dataType}}} {{paramName}}{{^-last}}, {{/-last}}{{/allParams}}
+       ) throws ApiException {
+    ```
+  </Step>
+  <Step title="Generate with your modified templates">
+    ```bash
+    openapi-generator generate -g java --library resteasy \
+      -t ~/.openapi-generator/templates/Java \
+      -o ~/.openapi-generator/example \
+      -i petstore.yaml
+    ```
+  </Step>
+</Steps>
+
+## Template variables
+
+Template variables are populated from the internal code model that the generator builds from your spec. You can inspect the full structure at generation time:
+
+<CodeGroup>
+
+```bash Inspect operations
+openapi-generator generate -g go \
+  -o out \
+  -i petstore.yaml \
+  --global-property debugOpenAPI=true
+```
+
+```bash Inspect models
+openapi-generator generate -g go \
+  -o out \
+  -i petstore.yaml \
+  --global-property debugModels=true
+```
+
+```bash Inspect supporting files
+openapi-generator generate -g go \
+  -o out \
+  -i petstore.yaml \
+  --global-property debugSupportingFiles=true
+```
+
+</CodeGroup>
+
+### Common model variables
+
+A model for a `Pet` schema exposes variables such as:
+
+```json
+{
+  "name": "Pet",
+  "classname": "Pet",
+  "classVarName": "Pet",
+  "vars": [ ... ],
+  "requiredVars": [ ... ],
+  "optionalVars": [ ... ],
+  "readOnlyVars": [ ... ],
+  "readWriteVars": [ ... ],
+  "allVars": [ ... ],
+  "hasVars": true,
+  "hasEnums": false,
+  "isEnum": false,
+  "hasRequired": true,
+  "hasOptional": true
+}
+```
+
+Each property in `vars` carries extensive metadata:
+
+| Variable | Description |
+|---|---|
+| `baseName` | Original name from the spec |
+| `name` | Language-sanitized name |
+| `dataType` | Target language data type |
+| `required` | Whether the property is required |
+| `isNullable` | Whether the property is nullable |
+| `isPrimitiveType` | True for string, integer, etc. |
+| `isContainer` | True for arrays and maps |
+| `isEnum` | True for enum properties |
+
+### Common operation variables
+
+| Variable | Description |
+|---|---|
+| `operationId` | The operation identifier |
+| `httpMethod` | HTTP verb (GET, POST, etc.) |
+| `path` | The URL path |
+| `allParams` | All parameters |
+| `bodyParam` | The request body parameter |
+| `returnType` | Return type, if any |
+| `summary` | Operation summary text |
+
+### Other notable variables
+
+- **`complexType`** — the model name (e.g. `Pet`)
+- **`isContainer`** — `true` if the property is an array or map
+- **`isPrimitiveType`** — `true` if the type is a primitive (string, integer, etc.)
+
+## Mustache lambdas
+
+All generators extending `DefaultCodegen` expose a set of built-in lambdas under the `lambda` key:
+
+| Lambda | Effect |
+|---|---|
+| `lowercase` | Converts to lowercase |
+| `uppercase` | Converts to uppercase |
+| `snakecase` | `once upon a time` → `once_upon_a_time` |
+| `titlecase` | `once upon a time` → `Once Upon A Time` |
+| `kebabcase` | `Once Upon A Time` → `once-upon-a-time` |
+| `pascalcase` | `once upon a time` → `OnceUponATime` |
+| `camelcase` | `Input-text` → `inputText` |
+| `uncamelize` | `inputText` → `Input Text` |
+| `forwardslash` | Normalizes path separators to `/` |
+| `backslash` | Replaces `/` with `\` |
+| `doublequote` | Wraps the fragment in `"..."` |
+| `indented` | Adds 4-space indent from line 2 onward |
+| `indented_8` | Adds 8-space indent from line 2 onward |
+| `indented_12` | Adds 12-space indent from line 2 onward |
+| `indented_16` | Adds 16-space indent from line 2 onward |
+
+Usage:
+
+```mustache
+{{#lambda.uppercase}}{{operationId}}{{/lambda.uppercase}}
+{{#lambda.snakecase}}{{classname}}{{/lambda.snakecase}}
+```
+
+## Mustache tips
+
+### First and last elements
+
+```mustache
+{{#vars}}{{#-first}}// first property: {{.}}{{/-first}}{{/vars}}
+{{#vars}}{{#-last}}// last property: {{.}}{{/-last}}{{/vars}}
+```
+
+### Inspecting the full context
+
+```mustache
+{{#operations}}{{this}}{{/operations}}
+```
+
+### 1-based index
+
+```mustache
+{{#enums}}{{-index}}. {{enum}}
+{{/enums}}
+```
+
+### Conditional sections
+
+```mustache
+{{#isRequired}}// required{{/isRequired}}
+{{^isRequired}}// optional{{/isRequired}}
+```
+
+### Iterating parameters
+
+```mustache
+public {{returnType}} {{operationId}}(
+    {{#allParams}}{{{dataType}}} {{paramName}}{{^-last}}, {{/-last}}{{/allParams}}
+) {
+```
+
+## Vendor extensions in templates
+
+OpenAPI supports vendor extensions (keys prefixed with `x-`) that flow through to templates. OpenAPI Generator exposes them via `vendorExtensions`.
+
+### x-enum-varnames and x-enum-descriptions
+
+Override enum member names and add per-value descriptions:
+
+```yaml
+WeatherType:
+  type: integer
+  format: int32
+  enum:
+    - 42
+    - 18
+    - 56
+  x-enum-descriptions:
+    - 'Blue sky'
+    - 'Slightly overcast'
+    - 'Take an umbrella with you'
+  x-enum-varnames:
+    - Sunny
+    - Cloudy
+    - Rainy
+```
+
+The lists must have the same length as `enum`; position determines the association.
+
+### Generator-specific extensions
+
+| Extension | Generator | Purpose |
+|---|---|---|
+| `x-objc-operationId` | ObjC | Override method name |
+| `x-accepts` | Java (Feign) | Single `Accepts` header value |
+| `x-content-type` | Java (Feign) | Single `Content-Type` header value |
+| `x-response-id` | Rust-server | Name the response enum variant |
+
+## Handlebars support
+
+Handlebars is available as an experimental alternative to Mustache since v4.0.0. Pass `-e handlebars` to the CLI to opt in:
+
+```bash
+openapi-generator generate -g java -e handlebars -i petstore.yaml -o out
+```
+
+<Warning>
+  Handlebars support is experimental. Some generators may not behave identically with Handlebars as they do with Mustache.
+</Warning>
+
+## Custom template engines
+
+If neither Mustache nor Handlebars meets your needs, you can implement a `TemplatingEngineAdapter` and load it at runtime.
+
+The example below creates an adapter for [Pebble Templates](https://pebbletemplates.io) in Kotlin.
+
+<Steps>
+  <Step title="Create a Gradle project with Kotlin support">
+    Add these dependencies to `build.gradle`:
+
+    ```groovy
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version '1.3.11'
+        id "com.github.johnrengelman.shadow" version "5.0.0"
+    }
+
+    dependencies {
+        compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+        compile "org.openapitools:openapi-generator-core:4.0.0-SNAPSHOT"
+        compile "io.pebbletemplates:pebble:3.0.8"
+    }
+    ```
+  </Step>
+  <Step title="Implement the adapter">
+    ```kotlin
+    @file:JvmName("PebbleTemplateAdapter")
+    package org.openapitools.examples.templating
+
+    class PebbleTemplateAdapter : AbstractTemplatingEngineAdapter() {
+        private val engine: PebbleEngine = PebbleEngine.Builder()
+            .cacheActive(false)
+            .loader(DelegatingLoader(listOf(FileLoader(), ClasspathLoader())))
+            .build()
+
+        // Allows targeting engine by id: -e pebble
+        override fun getIdentifier(): String = "pebble"
+
+        override fun compileTemplate(
+            generator: TemplatingGenerator?,
+            bundle: MutableMap<String, Any>?,
+            templateFile: String?
+        ): String {
+            // Converts model.mustache -> model.pebble
+            val modifiedTemplate = this.getModifiedFileLocation(templateFile).first()
+            val filePath = generator?.getFullTemplatePath(modifiedTemplate)
+            val writer = StringWriter()
+            if (filePath != null) {
+                engine.getTemplate(filePath.toAbsolutePath().toString())
+                    ?.evaluate(writer, bundle)
+            }
+            return writer.toString()
+        }
+
+        override fun getFileExtensions(): Array<String> = arrayOf("pebble")
+    }
+    ```
+  </Step>
+  <Step title="Register via ServiceLoader">
+    Create `src/main/resources/META-INF/services/org.openapitools.codegen.api.TemplatingEngineAdapter`:
+
+    ```
+    org.openapitools.examples.templating.PebbleTemplateAdapter
+    ```
+  </Step>
+  <Step title="Build and invoke">
+    ```bash
+    ./gradlew shadowJar
+
+    java -cp build/libs/pebble-template-adapter-1.0-SNAPSHOT-all.jar:openapi-generator-cli.jar \
+      org.openapitools.codegen.OpenAPIGenerator generate \
+      -g go \
+      -i petstore-minimal.json \
+      -e pebble \
+      -o /tmp/pebble-example/out \
+      -t /tmp/pebble-example/templates
+    ```
+
+    If you skip the `META-INF/services` file, reference the adapter by full class name instead of the short identifier:
+
+    ```bash
+    -e org.openapitools.examples.templating.PebbleTemplateAdapter
+    ```
+  </Step>
+</Steps>
+
+A Pebble model template looks like:
+
+```
+package {{packageName}}
+
+{% for item in models %}
+{% if item.isEnum %}
+// TODO: enum
+{% else %}
+{% if item.description is not empty %}// {{item.description}}{% endif %}
+type {{item.classname}} struct {
+{% for var in item.model.vars %}
+    {{var.name}} {% if var.isNullable %}*{% endif %}{{var.dataType}} `json:"{{var.baseName}}{% if var.required == false %},omitempty{% endif %}"`
+{% endfor %}
+}
+{% endif %}
+{% endfor %}
+```

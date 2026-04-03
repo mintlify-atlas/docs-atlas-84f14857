@@ -1,0 +1,173 @@
+---
+title: Global properties
+description: Reference for all OpenAPI Generator global properties, how they differ from config options, and how to pass them in the CLI, Maven, and Gradle.
+---
+
+Global properties are cross-cutting settings that control generation behavior at a level above any individual generator. They differ from [config options](/usage/configuration#types-of-configuration) in that they affect the generator framework itself — things like what artifacts to produce and what debug information to emit — rather than generator-specific output details.
+
+---
+
+## How to pass global properties
+
+Global properties are passed differently than config options and additional properties.
+
+<CodeGroup>
+
+```bash CLI
+# Set a property with no value (bare flag semantics)
+openapi-generator-cli generate --global-property debugModels ...
+
+# Set a property with an explicit value
+openapi-generator-cli generate --global-property apis=Equipment ...
+
+# Set multiple properties (repeat the flag)
+openapi-generator-cli generate \
+    --global-property apis \
+    --global-property models=User:Pet \
+    ...
+```
+
+```groovy Gradle
+openApiGenerate {
+    globalProperties.set([
+        apis: "",
+        models: "User:Pet"
+    ])
+}
+```
+
+```xml Maven
+<!--
+  Maven uses separate properties because XML cannot represent an empty string.
+  Use generateApis / apisToGenerate instead of a bare 'apis' global property.
+-->
+<configuration>
+  <generateApis>true</generateApis>
+  <apisToGenerate>Equipment</apisToGenerate>
+  <generateModels>true</generateModels>
+  <modelsToGenerate>User,Pet</modelsToGenerate>
+</configuration>
+```
+
+</CodeGroup>
+
+### Java system property alternative
+
+Prior to OpenAPI Generator 5.0, global properties could also be passed as JVM system properties using the `-D` flag. While this syntax is no longer recommended, it remains equivalent:
+
+```bash
+# Legacy (still works, but prefer --global-property)
+java -Dmodels -jar openapi-generator-cli.jar generate ...
+
+# Preferred (5.0+)
+openapi-generator-cli generate --global-property models ...
+```
+
+<Warning>
+  The `-D` CLI option was removed in 5.0. Use `--global-property` instead. If you are upgrading from an older version, update your scripts accordingly.
+</Warning>
+
+---
+
+## Available global properties
+
+| Property | Description | Acceptable value |
+|---|---|---|
+| `debugOpenAPI` | Dumps the fully-parsed, JSON-formatted OpenAPI document during generation. | _(no value)_ |
+| `debugModels` | Dumps JSON-formatted template-bound model information during generation. | _(no value)_ |
+| `debugOperations` | Dumps JSON-formatted template-bound operation information during generation. | _(no value)_ |
+| `debugSupportingFiles` | Dumps JSON-formatted supporting file information during generation. | _(no value)_ |
+| `verbose` | Controls generation verbosity. | `true` or `false` |
+| `generateAliasAsModel` | When `true`, wraps primitive types defined at the schema level in a model class. | `true` or `false` |
+| `org.openapitools.codegen.utils.oncelogger.enabled` | Enable or disable the OnceLogger, which reduces noise from repeated log messages. | `true` or `false` |
+| `supportingFiles` | Restricts which supporting files are generated. Prefer `.openapi-generator-ignore` for fine-grained control. | _(no value)_ or colon-separated file names |
+| `models` | Restricts which models are generated. Prefer `.openapi-generator-ignore` for fine-grained control. | _(no value)_ or colon-separated model names |
+| `apis` | Restricts which APIs are generated. Prefer `.openapi-generator-ignore` for fine-grained control. | _(no value)_ or colon-separated API names |
+| `apiDocs` | Controls whether API documentation files are generated. | `true` or `false` |
+| `modelDocs` | Controls whether model documentation files are generated. | `true` or `false` |
+| `apiTests` | Controls whether API test files are generated. | `true` or `false` |
+| `modelTests` | Controls whether model test files are generated. | `true` or `false` |
+
+---
+
+## Selective generation
+
+The `apis`, `models`, and `supportingFiles` properties let you generate only a subset of artifacts. This is useful when iterating on a specific part of the output without regenerating everything.
+
+<Note>
+  For persistent exclusions, the `.openapi-generator-ignore` file (similar to `.gitignore`) is more robust than selective generation properties.
+</Note>
+
+### Generate only APIs
+
+```bash
+# Generate all APIs
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property apis
+
+# Generate only the Equipment API
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property apis=Equipment
+```
+
+### Generate only models
+
+```bash
+# Generate all models
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property models
+
+# Generate only User and Pet models
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property models=User:Pet
+```
+
+### Combine selective properties
+
+```bash
+# Generate APIs and models, but no supporting files or docs
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property apis \
+    --global-property models \
+    --global-property apiDocs=false \
+    --global-property modelDocs=false
+```
+
+### Restrict supporting files
+
+```bash
+# Generate only specific supporting files
+openapi-generator-cli generate \
+    -i petstore.yaml -g java -o out/ \
+    --global-property supportingFiles=pom.xml:README.md
+```
+
+---
+
+## Debug properties
+
+Debug properties dump internal generator data structures as JSON. They are useful when developing custom templates or diagnosing unexpected output.
+
+<Tip>
+  Combine `--log-to-stderr` with a debug property to keep the JSON output clean for piping to a parser:
+
+  ```bash
+  openapi-generator-cli generate \
+      -i petstore.yaml -g go -o out/ \
+      --global-property debugOperations \
+      --log-to-stderr \
+      > operations.json
+  ```
+</Tip>
+
+| Property | What it dumps |
+|---|---|
+| `debugOpenAPI` | The fully-resolved OpenAPI document as seen by the generator. |
+| `debugModels` | Template variables bound to each model. |
+| `debugOperations` | Template variables bound to each operation. |
+| `debugSupportingFiles` | Template variables bound to each supporting file. |

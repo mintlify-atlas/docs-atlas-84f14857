@@ -1,0 +1,180 @@
+---
+title: CI/CD Integration
+description: Automate OpenAPI client and server generation in GitHub Actions and other CI/CD pipelines to keep generated code in sync with your API spec.
+---
+
+OpenAPI Generator fits naturally into continuous integration workflows. You can run generation on every spec change, push the results to a dedicated repository, or keep generated sources committed alongside your spec.
+
+## GitHub Actions
+
+The blog post [Autogenerating Clients with FastAPI and Github Actions](https://www.propelauth.com/post/autogenerating-clients-with-fastapi-and-github-actions) by Andrew Israel is a good starting point for integrating OpenAPI Generator into a GitHub Actions workflow.
+
+A typical workflow generates code on every push or pull request that modifies the spec file and either commits the result or opens a PR with the changes.
+
+### Example: Generate and Commit on Spec Change
+
+```yaml
+name: Generate API Client
+
+on:
+  push:
+    paths:
+      - 'api/openapi.yaml'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download OpenAPI Generator CLI
+        run: |
+          wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.19.0/openapi-generator-cli-7.19.0.jar \
+            -O openapi-generator-cli.jar
+
+      - name: Generate client
+        run: |
+          java -jar openapi-generator-cli.jar generate \
+            -i api/openapi.yaml \
+            -g java \
+            -o generated/java-client \
+            --api-package com.example.api \
+            --model-package com.example.model
+
+      - name: Commit generated code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add generated/
+          git diff --cached --quiet || git commit -m "chore: regenerate API client"
+          git push
+```
+
+<Tip>
+  Scope the `on.push.paths` trigger to your spec file so the workflow only runs when the API definition actually changes.
+</Tip>
+
+## Pushing Generated SDKs to GitHub
+
+OpenAPI Generator includes a `git_push.sh` script in the generated output of many generators. This script streamlines publishing a generated SDK to its own GitHub repository.
+
+<Steps>
+  <Step title="Create a new repository on GitHub">
+    Create the target repository where the SDK will live. See [GitHub's documentation](https://help.github.com/articles/creating-a-new-repository/) for instructions.
+  </Step>
+
+  <Step title="Generate the SDK with Git metadata">
+    Pass `--git-user-id` and `--git-repo-id` so the generated `git_push.sh` targets the correct repository:
+
+    ```bash
+    java -jar openapi-generator-cli.jar generate \
+      -i modules/openapi-generator/src/test/resources/3_0/petstore.json \
+      -g perl \
+      --git-user-id "wing328" \
+      --git-repo-id "petstore-perl" \
+      --release-note "GitHub integration demo" \
+      -o /var/tmp/perl/petstore
+    ```
+  </Step>
+
+  <Step title="Push the SDK using the generated script">
+    ```bash
+    cd /var/tmp/perl/petstore
+    /bin/sh ./git_push.sh
+    ```
+  </Step>
+</Steps>
+
+## General CI/CD Patterns
+
+### Running the Maven Plugin in CI
+
+If your project uses the Maven plugin, no extra configuration is needed — `mvn clean compile` triggers generation automatically during the `generate-sources` phase:
+
+```bash
+mvn clean compile
+```
+
+Skip generation in CI when the spec has not changed by enabling `skipIfSpecIsUnchanged`:
+
+```xml
+<configuration>
+    <skipIfSpecIsUnchanged>true</skipIfSpecIsUnchanged>
+</configuration>
+```
+
+### Running the Gradle Plugin in CI
+
+```bash
+./gradlew openApiGenerate
+```
+
+Tie generation to compilation so a single `./gradlew build` handles everything:
+
+```groovy
+compileJava.dependsOn tasks.named("openApiGenerate")
+```
+
+### Using the Docker Online Generator in CI
+
+The Docker-based online generator requires no local Java installation, making it useful in minimal CI environments:
+
+```bash
+# Start the generator service
+CID=$(docker run -d -p 8888:8080 openapitools/openapi-generator-online)
+sleep 10
+
+# Generate a client
+RESULT=$(curl -s -X POST \
+  --header 'Content-Type: application/json' \
+  -d "{\"openAPIUrl\": \"${SPEC_URL}\"}" \
+  "http://localhost:8888/api/gen/clients/${GENERATOR}")
+
+# Extract the download link and fetch the archive
+DOWNLOAD_LINK=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['link'])")
+curl -s -o generated.zip "$DOWNLOAD_LINK"
+unzip generated.zip
+
+# Tear down
+docker stop "${CID}" && docker rm "${CID}"
+```
+
+## CI/CD Configuration File Generation
+
+Some generators produce CI/CD configuration files (for example `.travis.yml`) as part of their output, so the generated SDK is immediately testable by a CI service.
+
+<Info>
+  If a generator does not yet produce a configuration file for your CI platform, open an [issue on GitHub](https://github.com/openapitools/openapi-generator/issues/new) to request support.
+</Info>
+
+## Best Practices
+
+**Committing generated code**
+
+- Store generated code in a dedicated directory (e.g. `generated/`) that is clearly separated from hand-written source.
+- Add a `.openapi-generator-ignore` file to protect files you have customized and do not want overwritten on the next generation run.
+- Include a comment or README in the generated directory noting that the files are auto-generated and should not be edited manually.
+
+**Keeping generated code in sync**
+
+- Run generation in CI on every change to the spec file.
+- Fail the build (or open a PR) when the freshly generated output differs from what is committed, to catch drift early.
+- Pin the generator version in your build configuration so output is deterministic across environments.
+
+**Selective generation**
+
+Use `globalProperties` (Maven/Gradle) or `--global-property` (CLI) to generate only the parts you need and reduce noise in diffs:
+
+```bash
+java -jar openapi-generator-cli.jar generate \
+  -i api/openapi.yaml \
+  -g java \
+  --global-property apis,models \
+  -o generated/java-client
+```

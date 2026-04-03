@@ -1,0 +1,198 @@
+---
+title: Documentation generators
+description: Generate static HTML, Markdown, AsciiDoc, and other human-readable documentation from an OpenAPI specification.
+---
+
+OpenAPI Generator includes several generators that produce human-readable documentation rather than executable code. All are in the `DOCUMENTATION` generator type.
+
+## Overview
+
+| Generator | Output format | Stability | Notes |
+|-----------|--------------|-----------|-------|
+| `html` | Single-page HTML | STABLE | Inline CSS, self-contained file |
+| `html2` | Single-page HTML | STABLE | Alternative template with richer layout |
+| `markdown` | Markdown files | BETA | Plain `.md` files, good for GitHub |
+| `asciidoc` | AsciiDoc markup | STABLE | Suitable for Antora or Asciidoctor |
+| `cwiki` | Confluence Wiki | STABLE | Confluence storage format |
+| `plantuml` | PlantUML diagrams | STABLE | Generates `.puml` diagram sources |
+
+---
+
+## html
+
+Generates a single self-contained HTML file with inline CSS. Suitable for sharing as a standalone document or hosting as a static page.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g html \
+  -o ./docs-html
+```
+
+Output: `./docs-html/index.html`
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `appName` | string | `null` | Short name of the application shown in the document title |
+| `appDescription` | string | `null` | Description of the application |
+| `infoEmail` | string | `null` | Contact email shown in the document |
+| `infoUrl` | string | `null` | URL for more information |
+| `licenseInfo` | string | `null` | Short license description |
+| `licenseUrl` | string | `null` | URL to the full license |
+
+The `html` generator has the most complete feature support of all documentation generators, including full OAS3 features such as `oneOf`, `anyOf`, `allOf`, `not`, callbacks, link objects, parameterized servers, and all security schemes.
+
+---
+
+## html2
+
+An alternative static HTML generator with a different visual template. Produces a single `index.html` similar to the `html` generator but with additional layout options.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g html2 \
+  -o ./docs-html2
+```
+
+### Key options
+
+`html2` supports the same core options as `html` plus a few additional ones for language-specific package names:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `appName` | string | `null` | Short name of the application |
+| `appDescription` | string | `null` | Description of the application |
+| `infoEmail` | string | `null` | Contact email |
+| `infoUrl` | string | `null` | URL for more information |
+| `licenseInfo` | string | `null` | Short license description |
+| `licenseUrl` | string | `null` | URL to the full license |
+| `packageName` | string | `null` | C# package name (carried over from multi-language template) |
+| `pythonPackageName` | string | `null` | Python package name |
+
+<Tip>
+  Both `html` and `html2` produce fully self-contained files with no external dependencies. They can be sent by email or committed to a repository as documentation artifacts.
+</Tip>
+
+---
+
+## markdown
+
+Generates Markdown (`.md`) documentation files, one per API tag plus a top-level `README.md`. The output integrates naturally with GitHub, GitLab, and static site generators that accept Markdown.
+
+<Note>
+  The `markdown` generator is in **BETA**. Output structure may change between releases.
+</Note>
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g markdown \
+  -o ./docs-markdown
+```
+
+The generator has no markdown-specific configuration options beyond the common ones:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `sortModelPropertiesByRequiredFlag` | boolean | `true` | Required properties before optional in model docs |
+| `sortParamsByRequiredFlag` | boolean | `true` | Required parameters before optional in operation docs |
+
+---
+
+## asciidoc
+
+Generates AsciiDoc markup that can be processed with [Asciidoctor](https://asciidoctor.org/) or published with [Antora](https://antora.org/). The output follows the AsciiDoc structure and supports include directives for modular documentation.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g asciidoc \
+  -o ./docs-asciidoc
+```
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `headerAttributes` | boolean | `true` | Generate AsciiDoc header meta-data attributes |
+| `useIntroduction` | boolean | `false` | Use an introduction section instead of an initial abstract |
+| `useMethodAndPath` | boolean | `false` | Use `HTTP METHOD /path` as the operation heading instead of the operation ID |
+| `useTableTitles` | boolean | `false` | Add titles to parameter tables rather than wrapping them in sections |
+| `skipExamples` | boolean | `false` | Omit example sections from the output |
+| `snippetDir` | string | `.` | Directory containing includable markup snippets (e.g., from Spring REST Docs) |
+| `specDir` | string | `..` | Directory containing handwritten spec include files |
+| `appName` | string | `null` | Application name |
+| `appDescription` | string | `null` | Application description |
+| `infoEmail` | string | `null` | Contact email |
+| `infoUrl` | string | `null` | URL for more information |
+
+### Example with custom headings
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g asciidoc \
+  -o ./docs \
+  --additional-properties=useMethodAndPath=true,useIntroduction=true,skipExamples=false
+```
+
+### Including handwritten content
+
+The `snippetDir` and `specDir` options allow you to include external AsciiDoc fragments inside the generated output. This is useful for integrating test-generated snippets (e.g., from Spring REST Docs) or adding hand-written sections alongside the auto-generated content.
+
+<Note>
+  The `asciidoc` generator does not support global features (host, base path, schemes) or schema features (simple, composite, polymorphism). It documents path and parameter information only.
+</Note>
+
+---
+
+## cwiki
+
+Generates documentation in Confluence Wiki storage format, ready for import into a Confluence space.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g cwiki \
+  -o ./docs-cwiki
+```
+
+The `cwiki` generator does not have generator-specific configuration options. Use the common options such as `sortParamsByRequiredFlag` if needed.
+
+---
+
+## plantuml
+
+Generates [PlantUML](https://plantuml.com/) diagram source files (`.puml`) representing the data models and their relationships from the OpenAPI spec. The diagrams can be rendered by the PlantUML CLI, IDE plugins, or the PlantUML online server.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g plantuml \
+  -o ./docs-diagrams
+```
+
+The generator produces one `.puml` file per model schema, which you can render to PNG or SVG:
+
+```bash
+plantuml ./docs-diagrams/*.puml
+```
+
+---
+
+## Comparing generators
+
+<AccordionGroup>
+  <Accordion title="When to use html or html2">
+    Use these when you need a portable, single-file reference document that requires no build toolchain. Both generators have full OAS3 feature support including callbacks, link objects, and schema composition.
+  </Accordion>
+  <Accordion title="When to use markdown">
+    Use `markdown` when your documentation lives alongside source code in a Git repository and you want it to render natively on GitHub or GitLab. Output can also feed into MkDocs, Docusaurus, or similar tools.
+  </Accordion>
+  <Accordion title="When to use asciidoc">
+    Use `asciidoc` when publishing with Asciidoctor or Antora, or when you need to include handwritten sections and test-generated snippets alongside auto-generated API docs using include directives.
+  </Accordion>
+</AccordionGroup>

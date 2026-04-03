@@ -1,0 +1,432 @@
+---
+title: Custom generator
+description: Build a fully custom OpenAPI Generator by implementing a Codegen class, registering it via SPI, and providing your own templates.
+---
+
+When modifying built-in templates isn't enough—for example, when you need to target a completely new language or framework, add new file types the built-in generator doesn't know about, or implement custom logic that can't be expressed in template variables alone—you need a custom generator.
+
+<Info>
+  If you only need to tweak the output of an existing generator, see [Templating](/customization/templating) first. A custom generator is the right choice when you need to control which files are generated, how the spec model is transformed, or what options are available.
+</Info>
+
+## User-defined templates vs. a custom generator
+
+| Approach | When to use |
+|---|---|
+| Modified templates (`-t` flag) | Change the structure or content of existing generated files |
+| User-defined templates (config `files` node, v5.0.0+) | Add extra files alongside existing generation without Java code |
+| Custom generator | New language/framework target, new file types, custom spec transformations, custom CLI options |
+
+## Required files
+
+A minimal custom generator needs four things:
+
+1. **A Codegen class** — extends `DefaultCodegen` and defines options, templates, and transformation logic
+2. **SPI registration** — a one-line entry in `META-INF/services/org.openapitools.codegen.CodegenConfig`
+3. **Templates** — at minimum an `api.mustache`; a `README.mustache` is strongly recommended
+4. **A config file** under `bin/configs` (for generators contributed to the project) — provides a working example for CI
+
+## Bootstrapping with `new.sh`
+
+The `new.sh` script in the repository root creates all the boilerplate for you.
+
+```bash
+./new.sh --help
+```
+
+```text
+Stubs out files for new generators
+
+Usage:
+./new.sh [options]
+    Options:
+    -n  Required. Specify generator name, should be kebab-cased.
+    -c  Create a client generator
+    -s  Create a server generator
+    -d  Create a documentation generator
+    -H  Create a schema generator
+    -f  Create a config generator
+    -t  When specified, creates test file(s) for the generator.
+    -h  Display help.
+```
+
+### Example: new documentation generator
+
+```bash
+./new.sh -n common-mark -d
+```
+
+Output:
+
+```text
+Creating modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/CommonMarkDocumentationCodegen.java
+Creating modules/openapi-generator/src/main/resources/common-mark-documentation/README.mustache
+Creating modules/openapi-generator/src/main/resources/common-mark-documentation/model.mustache
+Creating modules/openapi-generator/src/main/resources/common-mark-documentation/api.mustache
+Creating bin/configs/common-mark-documentation-petstore-new.yaml
+Finished.
+```
+
+For generators contributed back to the project, the `-t` flag generates test stubs as well:
+
+```bash
+./new.sh -n csharp -s -t
+# Also creates:
+#   CsharpServerCodegenTest.java
+#   CsharpServerCodegenModelTest.java
+#   CsharpServerCodegenOptionsTest.java
+#   CsharpServerCodegenOptionsProvider.java
+```
+
+<Note>
+  Convention is kebab-case for `-n`. For example, `scala-finatra` becomes the class `ScalaFinatraGenerator`.
+</Note>
+
+## Using the `meta` command (standalone JAR)
+
+If you're building a standalone custom generator rather than contributing to the project, use the `meta` command:
+
+```bash
+java -jar openapi-generator-cli.jar meta \
+  -o out/generators/my-codegen \
+  -n my-codegen \
+  -p com.my.company.codegen
+```
+
+This creates `out/generators/my-codegen` with everything needed to get started, including a `README.md`.
+
+## The generated Codegen class
+
+Running `new.sh -n common-mark -d` produces a constructor that looks like this:
+
+```java
+public CommonMarkDocumentationCodegen() {
+    super();
+
+    outputFolder = "generated-code" + File.separator + "common-mark";
+    modelTemplateFiles.put("model.mustache", ".zz");
+    apiTemplateFiles.put("api.mustache", ".zz");
+    embeddedTemplateDir = templateDir = "common-mark-documentation";
+    apiPackage = File.separator + "Apis";
+    modelPackage = File.separator + "Models";
+    supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
+    // TODO: Fill this out.
+}
+```
+
+### Key fields to configure
+
+<AccordionGroup>
+  <Accordion title="outputFolder">
+    The default output location. Users can always override this with `-o`.
+
+    ```java
+    outputFolder = "generated-code" + File.separator + "common-mark";
+    ```
+
+    Always use `File.separator` when joining paths for cross-platform compatibility.
+  </Accordion>
+  <Accordion title="modelTemplateFiles / apiTemplateFiles">
+    Maps a template filename to its output file extension. Change `.zz` to your target extension:
+
+    ```java
+    modelTemplateFiles.put("model.mustache", ".md");
+    apiTemplateFiles.put("api.mustache", ".md");
+    ```
+
+    Each registered template produces one output file per model or API tag respectively. For languages that require both a header and an implementation file, register two templates:
+
+    ```java
+    // C-style generators: one header + one implementation per API group
+    apiTemplateFiles.put("api-header.mustache", ".h");
+    apiTemplateFiles.put("api-body.mustache", ".m");
+    ```
+  </Accordion>
+  <Accordion title="embeddedTemplateDir / templateDir">
+    `embeddedTemplateDir` points to the directory under `src/main/resources` that is bundled with your generator. `templateDir` is the runtime value, which can be overridden by the user with `-t`.
+
+    ```java
+    embeddedTemplateDir = templateDir = "common-mark-documentation";
+    ```
+
+    The generator falls back to files in `embeddedTemplateDir` when the user's custom template directory doesn't contain a given file.
+  </Accordion>
+  <Accordion title="apiPackage / modelPackage">
+    The subdirectory (or package namespace) where generated API and model files are written:
+
+    ```java
+    apiPackage = "Apis";
+    modelPackage = "Models";
+    ```
+  </Accordion>
+  <Accordion title="supportingFiles">
+    One-off files that are not generated per-model or per-API. A supporting file whose name ends in `.mustache` is processed through the template engine; all other files are copied as-is.
+
+    ```java
+    supportingFiles.add(new SupportingFile("README.mustache", "", "README.md"));
+    ```
+
+    The three constructor arguments are: template filename, output subdirectory, and output filename.
+  </Accordion>
+</AccordionGroup>
+
+## SPI registration
+
+The generator class must be listed in the SPI file so the tool can discover it:
+
+```
+modules/openapi-generator/src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig
+```
+
+Add a line with the fully qualified class name:
+
+```
+org.openapitools.codegen.languages.CommonMarkDocumentationCodegen
+```
+
+For standalone generators (built outside the main project), the same file must exist in your JAR at:
+
+```
+src/main/resources/META-INF/services/org.openapitools.codegen.CodegenConfig
+```
+
+## Writing the templates
+
+### README.mustache
+
+A typical documentation README template:
+
+```mustache
+# Documentation for {{appName}}
+
+{{#generateApiDocs}}
+## Documentation for API Endpoints
+
+All URIs are relative to *{{{basePath}}}*
+
+Class | Method | HTTP request | Description
+------------ | ------------- | ------------- | -------------
+{{#apiInfo}}{{#apis}}{{#operations}}{{#operation}}*{{classname}}* | [**{{operationId}}**](Apis/{{classname}}.md#{{operationIdLowerCase}}) | **{{httpMethod}}** {{path}} | {{#summary}}{{{summary}}}{{/summary}}
+{{/operation}}{{/operations}}{{/apis}}{{/apiInfo}}
+{{/generateApiDocs}}
+
+{{#generateModelDocs}}
+## Documentation for Models
+
+{{#modelPackage}}
+{{#models}}{{#model}} - [{{{modelPackage}}}.{{{classname}}}](Models/{{{classname}}}.md)
+{{/model}}{{/models}}
+{{/modelPackage}}
+{{/generateModelDocs}}
+
+## Documentation for Authorization
+
+{{^authMethods}}Endpoints do not require authorization.{{/authMethods}}
+{{#authMethods}}
+### {{name}}
+
+{{#isApiKey}}- **Type**: API key
+- **API key parameter name**: {{keyParamName}}
+- **Location**: {{#isKeyInQuery}}URL query string{{/isKeyInQuery}}{{#isKeyInHeader}}HTTP header{{/isKeyInHeader}}
+{{/isApiKey}}
+{{#isBasicBearer}}- **Type**: HTTP Bearer Token authentication
+{{/isBasicBearer}}
+{{#isOAuth}}- **Type**: OAuth
+- **Flow**: {{flow}}
+- **Authorization URL**: {{authorizationUrl}}
+{{/isOAuth}}
+{{/authMethods}}
+```
+
+### api.mustache
+
+```mustache
+# {{classname}}{{#description}}
+{{description}}{{/description}}
+
+All URIs are relative to *{{basePath}}*
+
+Method | HTTP request | Description
+------------- | ------------- | -------------
+{{#operations}}{{#operation}}[**{{operationId}}**]({{classname}}.md#{{operationId}}) | **{{httpMethod}}** {{path}} | {{#summary}}{{summary}}{{/summary}}
+{{/operation}}{{/operations}}
+
+{{#operations}}
+{{#operation}}
+# **{{operationId}}**
+> {{#returnType}}{{returnType}} {{/returnType}}{{operationId}}({{#allParams}}{{{paramName}}}{{^-last}}, {{/-last}}{{/allParams}})
+
+{{summary}}{{#notes}}
+
+{{notes}}{{/notes}}
+
+### Parameters
+{{^allParams}}This endpoint does not need any parameter.{{/allParams}}
+{{#allParams}}{{#-last}}
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------{{/-last}}{{/allParams}}
+{{#allParams}} **{{paramName}}** | {{#isPrimitiveType}}**{{dataType}}**{{/isPrimitiveType}}{{^isPrimitiveType}}[**{{dataType}}**]({{baseType}}.md){{/isPrimitiveType}} | {{description}} |{{^required}} [optional]{{/required}}{{#defaultValue}} [default to {{defaultValue}}]{{/defaultValue}}
+{{/allParams}}
+
+### Return type
+
+{{#returnType}}**{{returnType}}**{{/returnType}}{{^returnType}}null (empty response body){{/returnType}}
+
+### Authorization
+
+{{^authMethods}}No authorization required{{/authMethods}}{{#authMethods}}[{{name}}](../README.md#{{name}}){{/authMethods}}
+
+### HTTP request headers
+
+ - **Content-Type**: {{#consumes}}{{{mediaType}}}{{^-last}}, {{/-last}}{{/consumes}}{{^consumes}}Not defined{{/consumes}}
+ - **Accept**: {{#produces}}{{{mediaType}}}{{^-last}}, {{/-last}}{{/produces}}{{^produces}}Not defined{{/produces}}
+
+{{/operation}}
+{{/operations}}
+```
+
+### model.mustache
+
+```mustache
+{{#models}}
+{{#model}}
+# {{{packageName}}}.{{modelPackage}}.{{{classname}}}
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+{{#vars}}**{{name}}** | {{#isPrimitiveType}}**{{dataType}}**{{/isPrimitiveType}}{{^isPrimitiveType}}[**{{dataType}}**]({{complexType}}.md){{/isPrimitiveType}} | {{description}} | {{^required}}[optional] {{/required}}{{#readOnly}}[readonly] {{/readOnly}}{{#defaultValue}}[default to {{{.}}}]{{/defaultValue}}
+{{/vars}}
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+{{/model}}
+{{/models}}
+```
+
+## Building and running your generator
+
+<Steps>
+  <Step title="Build the project">
+    ```bash
+    mvn clean package -DskipTests
+    ```
+
+    For a generator contributed to the main project. For a standalone generator built with the `meta` command:
+
+    ```bash
+    mvn package -f out/generators/my-codegen
+    ```
+  </Step>
+  <Step title="Generate sample output">
+    The `new.sh` script creates a config file at `bin/configs/common-mark-documentation-petstore-new.yaml`:
+
+    ```yaml
+    generatorName: common-mark
+    outputDir: samples/documentation/petstore/common/mark
+    inputSpec: modules/openapi-generator/src/test/resources/3_0/petstore.yaml
+    templateDir: modules/openapi-generator/src/main/resources/common-mark-documentation
+    additionalProperties:
+      hideGenerationTimestamp: "true"
+    ```
+
+    Run it:
+
+    ```bash
+    ./bin/generate-samples.sh bin/configs/common-mark-documentation-petstore-new.yaml
+    ```
+  </Step>
+  <Step title="Verify the output">
+    For markdown generators, you can preview the result with `markserv`:
+
+    ```bash
+    npm install --global markserv
+    markserv samples/documentation/petstore/common/markdown
+    ```
+  </Step>
+</Steps>
+
+## Using a standalone generator via classpath
+
+Once you have a JAR, add it to the classpath alongside the CLI fat JAR:
+
+<CodeGroup>
+
+```bash Unix / macOS
+java -cp out/generators/my-codegen/target/my-codegen-openapi-generator-1.0.0.jar:modules/openapi-generator-cli/target/openapi-generator-cli.jar \
+  org.openapitools.codegen.OpenAPIGenerator generate \
+  -g my-codegen \
+  -i petstore.yaml \
+  -o ./out/myClient
+```
+
+```bash Windows
+java -cp "out/generators/my-codegen/target/my-codegen-openapi-generator-1.0.0.jar;modules/openapi-generator-cli/target/openapi-generator-cli.jar" ^
+  org.openapitools.codegen.OpenAPIGenerator generate ^
+  -g my-codegen ^
+  -i petstore.yaml ^
+  -o ./out/myClient
+```
+
+</CodeGroup>
+
+## Using a standalone generator with Maven
+
+Install to your local Maven repository:
+
+```bash
+mvn clean install -f out/generators/my-codegen
+```
+
+Then add it as a plugin dependency:
+
+```xml
+<plugin>
+  <groupId>org.openapitools</groupId>
+  <artifactId>openapi-generator-maven-plugin</artifactId>
+  <version>${openapi-generator-version}</version>
+  <executions>
+    <execution>
+      <goals><goal>generate</goal></goals>
+      <configuration>
+        <generatorName>my-codegen</generatorName>
+      </configuration>
+    </execution>
+  </executions>
+  <dependencies>
+    <dependency>
+      <groupId>org.openapitools</groupId>
+      <artifactId>my-codegen-openapi-generator</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+  </dependencies>
+</plugin>
+```
+
+## Extending an existing generator
+
+For smaller customizations—like changing a file prefix—you can subclass an existing generator:
+
+```java
+package com.mycompany.openapitools.codegen;
+
+import org.openapitools.codegen.languages.ObjcClientCodegen;
+
+public class MyObjcCodegen extends ObjcClientCodegen {
+    static {
+        PREFIX = "HELLO";
+    }
+}
+```
+
+Pass the fully qualified class name as the generator:
+
+```bash
+openapi-generator generate -g com.mycompany.openapitools.codegen.MyObjcCodegen \
+  -i petstore.yaml \
+  -o ./out/myObjcClient
+```
+
+<Tip>
+  Review existing generators in `modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/` before starting from scratch. Finding one that's close to your target language or framework and subclassing it is usually faster than extending `DefaultCodegen` directly.
+</Tip>

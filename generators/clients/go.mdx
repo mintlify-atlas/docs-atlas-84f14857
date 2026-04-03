@@ -1,0 +1,228 @@
+---
+title: Go Client Generator
+description: Generate an idiomatic Go client SDK from an OpenAPI specification, with go.mod support, MarshalJSON/UnmarshalJSON helpers, and optional interface generation.
+---
+
+The `go` generator produces an idiomatic Go client library. Generated code uses Go's standard `net/http` package via a thin wrapper, includes typed request/response structs, and generates `go.mod` and `go.sum` by default.
+
+| Property | Value |
+|----------|-------|
+| Generator name | `go` |
+| Stability | STABLE |
+| Generator type | CLIENT |
+| Default templating engine | mustache |
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `packageName` | String | `openapi` | Go package name (lowercase convention) |
+| `packageVersion` | String | `1.0.0` | Go module version |
+| `withGoMod` | Boolean | `true` | Generate `go.mod` and `go.sum` files |
+| `generateInterfaces` | Boolean | `false` | Generate an interface for each API struct (useful for mocking) |
+| `generateMarshalJSON` | Boolean | `true` | Generate custom `MarshalJSON` methods on models |
+| `generateUnmarshalJSON` | Boolean | `true` | Generate custom `UnmarshalJSON` methods on models |
+| `enumClassPrefix` | Boolean | `false` | Prefix enum values with the type name (e.g. `StatusActive` instead of `Active`) |
+| `structPrefix` | Boolean | `false` | Prefix operation option structs with the API name (e.g. `PetApiDeletePetOpts`) |
+| `isGoSubmodule` | Boolean | `false` | Treat the generated package as a Go submodule |
+| `useDefaultValuesForRequiredVars` | Boolean | `false` | Apply default values to required variables when available |
+| `useOneOfDiscriminatorLookup` | Boolean | `false` | Use discriminator mapping for faster oneOf lookup (skips validation) |
+| `withAWSV4Signature` | Boolean | `false` | Include AWS Signature v4 signing support |
+| `withXml` | Boolean | `false` | Include XML struct tags and `application/xml` support |
+| `hideGenerationTimestamp` | Boolean | `true` | Omit the generation timestamp from generated files |
+| `prependFormOrBodyParameters` | Boolean | `false` | Place form/body parameters first in function signatures |
+| `disallowAdditionalPropertiesIfNotPresent` | Boolean | `true` | Treat schemas without `additionalProperties` as closed |
+
+## Generation example
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate the client">
+    ```bash
+    openapi-generator-cli generate \
+      -i https://petstore3.swagger.io/api/v3/openapi.json \
+      -g go \
+      -o ./petstore-go-client \
+      --additional-properties=packageName=petstore,packageVersion=1.0.0
+    ```
+  </Step>
+  <Step title="Generate with interfaces (for mocking)">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g go \
+      -o ./petstore-go-client \
+      --additional-properties=packageName=petstore,generateInterfaces=true,enumClassPrefix=true
+    ```
+  </Step>
+</Steps>
+
+## Generated project structure
+
+```
+petstore-go-client/
+├── go.mod
+├── go.sum
+├── README.md
+├── .openapi-generator-ignore
+├── api_pet.go              # PetAPI methods
+├── api_store.go            # StoreAPI methods
+├── api_user.go             # UserAPI methods
+├── client.go               # APIClient, Configuration, and HTTP helpers
+├── configuration.go        # Configuration struct
+├── model_pet.go            # Pet struct with Marshal/Unmarshal
+├── model_category.go
+├── model_api_response.go
+└── utils.go                # Helper utilities (PtrString, PtrInt64, etc.)
+```
+
+## Using the generated client
+
+<Steps>
+  <Step title="Initialize your Go module">
+    ```bash
+    go mod init github.com/myorg/myapp
+    ```
+  </Step>
+  <Step title="Add the generated package">
+    Copy or symlink the generated directory into your project, then update `go.mod`:
+
+    ```
+    require github.com/myorg/petstore-go-client v1.0.0
+    ```
+
+    Or reference it locally with a `replace` directive:
+
+    ```
+    require github.com/myorg/petstore-go-client v0.0.0
+    replace github.com/myorg/petstore-go-client => ./petstore-go-client
+    ```
+  </Step>
+  <Step title="Create and configure the client">
+    ```go
+    package main
+
+    import (
+        "context"
+        "fmt"
+        "log"
+
+        petstore "github.com/myorg/petstore-go-client"
+    )
+
+    func main() {
+        cfg := petstore.NewConfiguration()
+        cfg.Servers = petstore.ServerConfigurations{
+            {URL: "https://petstore3.swagger.io/api/v3"},
+        }
+
+        client := petstore.NewAPIClient(cfg)
+        ctx := context.Background()
+
+        // API key authentication
+        ctx = context.WithValue(ctx, petstore.ContextAPIKeys, map[string]petstore.APIKey{
+            "api_key": {Key: "YOUR_API_KEY"},
+        })
+
+        // Bearer token authentication
+        ctx = context.WithValue(ctx, petstore.ContextAccessToken, "YOUR_BEARER_TOKEN")
+
+        // Get a pet by ID
+        pet, resp, err := client.PetAPI.GetPetById(ctx, 1).Execute()
+        if err != nil {
+            log.Fatalf("Error fetching pet: %v (HTTP %d)", err, resp.StatusCode)
+        }
+        fmt.Printf("Pet name: %s\n", pet.GetName())
+    }
+    ```
+  </Step>
+  <Step title="Create and update resources">
+    ```go
+    // Add a new pet
+    newPet := petstore.NewPet("Fluffy", []string{"https://example.com/fluffy.jpg"})
+    newPet.SetStatus("available")
+
+    created, _, err := client.PetAPI.AddPet(ctx).Pet(*newPet).Execute()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Created pet with ID: %d\n", created.GetId())
+
+    // Update a pet
+    newPet.SetId(created.GetId())
+    newPet.SetName("Fluffy Updated")
+    _, _, err = client.PetAPI.UpdatePet(ctx).Pet(*newPet).Execute()
+    ```
+  </Step>
+  <Step title="Handle optional values with pointer helpers">
+    The generated code provides typed pointer helpers to avoid `nil` dereference issues with optional fields:
+
+    ```go
+    // Using generated pointer helpers
+    name := petstore.PtrString("Fluffy")
+    id   := petstore.PtrInt64(42)
+    flag := petstore.PtrBool(true)
+
+    // Access optional fields safely
+    if pet.Name != nil {
+        fmt.Println(*pet.Name)
+    }
+    // Or use the generated getter (returns zero value if nil)
+    fmt.Println(pet.GetName())
+    ```
+  </Step>
+</Steps>
+
+## Error handling
+
+```go
+pet, httpResp, err := client.PetAPI.GetPetById(ctx, 9999).Execute()
+if err != nil {
+    // Check for a typed OpenAPI error
+    if apiErr, ok := err.(*petstore.GenericOpenAPIError); ok {
+        fmt.Printf("API error body: %s\n", apiErr.Body())
+        fmt.Printf("API error model: %v\n", apiErr.Model())
+    }
+    // HTTP status is available on httpResp even on error
+    if httpResp != nil {
+        fmt.Printf("HTTP status: %d\n", httpResp.StatusCode)
+    }
+    log.Fatal(err)
+}
+```
+
+## Using generated interfaces (mocking)
+
+When `generateInterfaces=true`, each API gets a corresponding interface:
+
+```go
+// PetAPIInterface is generated when generateInterfaces=true
+type PetAPIInterface interface {
+    AddPet(ctx context.Context) ApiAddPetRequest
+    GetPetById(ctx context.Context, petId int64) ApiGetPetByIdRequest
+    // ...
+}
+
+// Implement a mock for testing
+type MockPetAPI struct{}
+
+func (m *MockPetAPI) GetPetById(ctx context.Context, petId int64) petstore.ApiGetPetByIdRequest {
+    // Return test data
+}
+```
+
+<Tip>
+  Use `enumClassPrefix=true` when your spec has enums with generic values (like `Active`, `Inactive`) that would otherwise collide with identically named enums from other schemas.
+</Tip>
+
+## Related server generators
+
+| Generator | Stability | Notes |
+|-----------|-----------|-------|
+| `go-server` | STABLE | Standard `net/http` server stubs |
+| `go-gin-server` | STABLE | Gin framework server stubs |
+| `go-echo-server` | BETA | Echo framework server stubs |

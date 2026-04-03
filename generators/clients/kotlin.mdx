@@ -1,0 +1,247 @@
+---
+title: Kotlin Client Generator
+description: Generate a Kotlin client SDK from an OpenAPI specification targeting JVM, Android, and Kotlin Multiplatform using OkHttp4, Retrofit2, Ktor, Spring WebClient, Vert.x, and Volley.
+---
+
+The `kotlin` generator produces a Kotlin client library. It supports multiple platforms and HTTP libraries through its **library** option, including JVM-based libraries and Kotlin Multiplatform.
+
+| Property | Value |
+|----------|-------|
+| Generator name | `kotlin` |
+| Stability | STABLE |
+| Generator type | CLIENT |
+| Default templating engine | mustache |
+
+## Available libraries
+
+<AccordionGroup>
+  <Accordion title="jvm-okhttp4 (default)">
+    **Platform:** JVM. **HTTP client:** OkHttp 4.2.0 (Android 5.0+ and Java 8+). **JSON:** Moshi 1.8.0.
+
+    The default library. Well-suited for Android and server-side JVM projects.
+  </Accordion>
+  <Accordion title="jvm-retrofit2">
+    **Platform:** JVM. **HTTP client:** Retrofit 2.6.2 over OkHttp.
+
+    Supports RxJava 3 (`useRxJava3=true`) and Kotlin Coroutines (`useCoroutines=true`). Use `useResponseAsReturnType=true` (the default) to return `Response<T>` when coroutines are enabled, or `false` to return `T` directly.
+
+    Supports the `gson`, `jackson`, and `kotlinx_serialization` serialization libraries.
+  </Accordion>
+  <Accordion title="jvm-spring-webclient">
+    **Platform:** JVM. **HTTP:** Spring WebClient (Spring 5 or Spring 6 with `useSpringBoot3=true`). **JSON:** Jackson.
+
+    Use `useSpringBoot3=true` for Spring Boot 3.x / Spring 6.
+  </Accordion>
+  <Accordion title="jvm-spring-restclient">
+    **Platform:** JVM. **HTTP:** Spring 6 RestClient. **JSON:** Jackson.
+
+    Requires Spring Boot 3.2+ / Spring 6.1+.
+  </Accordion>
+  <Accordion title="jvm-ktor">
+    **Platform:** JVM. **HTTP:** Ktor 1.6.7. **JSON:** Gson or Jackson (default: Jackson).
+  </Accordion>
+  <Accordion title="multiplatform">
+    **Platform:** Kotlin Multiplatform (KMP). **HTTP:** Ktor 1.6.7. **JSON:** Kotlinx Serialization 1.2.1.
+
+    Generates `commonMain`, `jvmMain`, and `jsMain` source sets for sharing code across JVM, Android, iOS, and JS targets.
+  </Accordion>
+  <Accordion title="jvm-vertx">
+    **Platform:** JVM. **HTTP:** Vert.x Web Client. **JSON:** Moshi, Gson, or Jackson.
+  </Accordion>
+  <Accordion title="jvm-volley">
+    **Platform:** Android JVM. **HTTP:** Volley 1.2.1. **JSON:** Gson 2.8.9.
+
+    **Deprecated.** Supports Android Room model generation (`generateRoomModels=true`).
+  </Accordion>
+</AccordionGroup>
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `library` | Enum | `jvm-okhttp4` | HTTP library (see above) |
+| `packageName` | String | `org.openapitools.client` | Generated artifact package name |
+| `artifactId` | String | `kotlin-client` | Generated JAR artifact ID |
+| `artifactVersion` | String | `1.0.0` | Artifact version |
+| `groupId` | String | `org.openapitools` | Maven/Gradle group ID |
+| `sourceFolder` | String | `src/main/kotlin` | Source output folder |
+| `serializationLibrary` | Enum | `moshi` | Serialization library: `moshi`, `gson`, `jackson`, `kotlinx_serialization` |
+| `dateLibrary` | Enum | `java8` | Date library: `java8`, `java8-localdatetime`, `threetenbp`, `threetenbp-localdatetime`, `kotlinx-datetime`, `string` |
+| `collectionType` | Enum | `list` | Collection type: `list` (`kotlin.collections.List`) or `array` (`kotlin.Array`) |
+| `useCoroutines` | Boolean | `false` | Use Kotlin Coroutines with `jvm-retrofit2` |
+| `useRxJava3` | Boolean | `false` | Use RxJava 3 adapter with `jvm-retrofit2` |
+| `useResponseAsReturnType` | Boolean | `true` | Return `Response<T>` instead of `T` when using coroutines with `jvm-retrofit2` |
+| `useSpringBoot3` | Boolean | `false` | Target Spring Boot 3.x with `jvm-spring-webclient` |
+| `enumPropertyNaming` | Enum | `original` | Enum naming: `original`, `camelCase`, `PascalCase`, `snake_case`, `UPPERCASE` |
+| `modelMutable` | Boolean | `false` | Generate `var` properties instead of `val` (mutable models) |
+| `companionObject` | Boolean | `false` | Add companion objects to data classes |
+| `generateOneOfAnyOfWrappers` | Boolean | `false` | Generate wrapper classes for `oneOf`/`anyOf` schemas (`jvm-retrofit2` with `gson` or `kotlinx_serialization` only) |
+| `moshiCodeGen` | Boolean | `false` | Enable Moshi code-gen annotation processing instead of reflection |
+| `failOnUnknownProperties` | Boolean | `false` | Fail Jackson deserialization on unknown JSON properties |
+| `parcelizeModels` | Boolean | `null` | Add `@Parcelize` to models (Android) |
+| `explicitApi` | Boolean | `false` | Generate code with explicit access modifiers (Kotlin Explicit API Mode) |
+| `nullableReturnType` | Boolean | `false` | Make API method return types nullable |
+| `implicitHeaders` | Boolean | `false` | Skip header parameters in generated API method signatures |
+| `requestDateConverter` | Enum | `toJson` | How to serialize date-time objects in requests: `toJson` or `toString` |
+| `nonPublicApi` | Boolean | `false` | Use reduced access modifiers for embedding the client in a library |
+| `omitGradleWrapper` | Boolean | `false` | Skip generating the Gradle wrapper |
+| `omitGradlePluginVersions` | Boolean | `false` | Skip declaring Gradle plugin versions in build files |
+
+## Generation example
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate with OkHttp4/Moshi (default)">
+    ```bash
+    openapi-generator-cli generate \
+      -i https://petstore3.swagger.io/api/v3/openapi.json \
+      -g kotlin \
+      -o ./petstore-kotlin-client \
+      --additional-properties=packageName=com.example.petstore,artifactId=petstore-client
+    ```
+  </Step>
+  <Step title="Generate with Retrofit2 + Coroutines">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g kotlin \
+      -o ./petstore-retrofit-client \
+      --additional-properties=library=jvm-retrofit2,packageName=com.example.petstore,useCoroutines=true,serializationLibrary=kotlinx_serialization
+    ```
+  </Step>
+  <Step title="Generate for Kotlin Multiplatform">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g kotlin \
+      -o ./petstore-kmp-client \
+      --additional-properties=library=multiplatform,packageName=com.example.petstore
+    ```
+  </Step>
+  <Step title="Generate for Spring WebClient (Spring Boot 3)">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g kotlin \
+      -o ./petstore-spring-client \
+      --additional-properties=library=jvm-spring-webclient,useSpringBoot3=true,packageName=com.example.petstore
+    ```
+  </Step>
+</Steps>
+
+## Generated project structure
+
+```
+petstore-kotlin-client/
+├── build.gradle
+├── settings.gradle
+├── gradlew
+├── gradlew.bat
+├── README.md
+└── src/
+    └── main/
+        └── kotlin/
+            └── com/example/petstore/
+                ├── infrastructure/
+                │   ├── ApiClient.kt         # HTTP client configuration
+                │   ├── ApiAbstractions.kt
+                │   ├── RequestConfig.kt
+                │   └── Serializer.kt
+                ├── apis/
+                │   └── PetApi.kt            # Generated API class per tag
+                └── models/
+                    ├── Pet.kt               # Generated data class per schema
+                    └── Category.kt
+```
+
+### Multiplatform structure
+
+When using `library=multiplatform`, the generated code is split across source sets:
+
+```
+src/
+├── commonMain/kotlin/…    # Shared API and model code
+├── jvmMain/kotlin/…       # JVM-specific transport
+└── jsMain/kotlin/…        # JS-specific transport
+```
+
+## Using the generated client
+
+### OkHttp4 / Moshi
+
+```kotlin
+import com.example.petstore.infrastructure.ApiClient
+import com.example.petstore.apis.PetApi
+import com.example.petstore.models.Pet
+
+fun main() {
+    val client = ApiClient(basePath = "https://petstore3.swagger.io/api/v3")
+
+    // Bearer token
+    client.setBearerToken("YOUR_TOKEN")
+
+    // API key
+    client.setApiKey("YOUR_API_KEY")
+
+    val petApi = client.createService(PetApi::class.java)
+
+    // Get a pet by ID (synchronous with OkHttp4)
+    val response = petApi.getPetById(1L).execute()
+    if (response.isSuccessful) {
+        val pet: Pet? = response.body()
+        println("Pet name: ${pet?.name}")
+    }
+
+    // Add a new pet
+    val newPet = Pet(name = "Fluffy", photoUrls = listOf("https://example.com/fluffy.jpg"))
+    petApi.addPet(newPet).execute()
+}
+```
+
+### Retrofit2 + Coroutines
+
+```kotlin
+import com.example.petstore.apis.PetApi
+import com.example.petstore.models.Pet
+
+// Assuming the ApiClient is configured with Retrofit2 + coroutine adapter
+suspend fun fetchPet(petApi: PetApi) {
+    val pet: Pet = petApi.getPetById(1L)
+    println("Pet: ${pet.name}")
+}
+
+// Using Response<T> (when useResponseAsReturnType=true)
+suspend fun fetchPetSafe(petApi: PetApi) {
+    val response = petApi.getPetById(1L)
+    if (response.isSuccessful) {
+        println("Pet: ${response.body()?.name}")
+    } else {
+        println("Error: ${response.code()}")
+    }
+}
+```
+
+## Vendor extensions
+
+| Extension | Applicable to | Description |
+|-----------|---------------|-------------|
+| `x-class-extra-annotation` | MODEL | Custom annotations added at the class level |
+| `x-field-extra-annotation` | FIELD, OPERATION_PARAMETER | Custom annotations added at the field level |
+
+## Related server generators
+
+| Generator | Stability | Notes |
+|-----------|-----------|-------|
+| `kotlin-spring` | STABLE | Kotlin Spring Boot server stubs |
+| `kotlin-server` | STABLE | Kotlin Ktor server stubs |
+| `kotlin-misk` | STABLE | Misk (Square) framework server stubs |
+| `kotlin-vertx` | BETA | Vert.x server stubs |
+| `kotlin-wiremock` | BETA | WireMock stubs for contract testing |
+
+<Warning>
+  The `jvm-volley` library is deprecated. Use `jvm-okhttp4` for Android projects instead.
+</Warning>

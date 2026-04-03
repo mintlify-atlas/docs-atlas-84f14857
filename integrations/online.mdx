@@ -1,0 +1,183 @@
+---
+title: Online Generator
+description: Use the hosted REST API or a self-hosted Docker container to generate clients and servers over HTTP without installing anything locally.
+---
+
+OpenAPI Generator is available as a hosted web service and as a Docker image you can run yourself. Both expose the same REST API, making it straightforward to generate SDKs from a URL or an inline spec payload.
+
+## Hosted Service
+
+Two public endpoints are available at no charge:
+
+| Endpoint | Version |
+|---|---|
+| `http://api.openapi-generator.tech` | Latest stable release |
+| `http://api-latest-master.openapi-generator.tech` | Latest master (updated hourly) |
+
+<Warning>
+  These services are beta and carry no service-level guarantees. For production pipelines, run the Docker image yourself.
+</Warning>
+
+## REST API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/gen/clients` | List all available client generators |
+| `GET` | `/api/gen/servers` | List all available server generators |
+| `GET` | `/api/gen/clients/{language}` | Retrieve available options for a client generator |
+| `GET` | `/api/gen/servers/{framework}` | Retrieve available options for a server generator |
+| `POST` | `/api/gen/clients/{language}` | Generate a client SDK |
+| `POST` | `/api/gen/servers/{framework}` | Generate a server stub |
+| `GET` | `/api/gen/download/{fileId}` | Download a previously generated zip |
+
+## Docker Image
+
+The `openapitools/openapi-generator-online` Docker image runs the same REST API locally. This is the recommended approach for CI pipelines and environments that require data privacy.
+
+### Full Workflow Example
+
+<Steps>
+  <Step title="Start the container">
+    ```bash
+    # Start the container on port 8888 and capture its ID
+    CID=$(docker run -d -p 8888:8080 openapitools/openapi-generator-online)
+
+    # Wait for the service to be ready
+    sleep 10
+    ```
+  </Step>
+
+  <Step title="Generate a client">
+    Send a `POST` request with the spec URL. This example generates a Ruby client from the Petstore spec:
+
+    ```bash
+    curl -X POST \
+      --header 'Content-Type: application/json' \
+      --header 'Accept: application/json' \
+      -d '{"openAPIUrl": "https://raw.githubusercontent.com/openapitools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml"}' \
+      'http://localhost:8888/api/gen/clients/ruby'
+    ```
+
+    The response contains a `code` and a `link` for downloading the result:
+
+    ```json
+    {
+      "code": "c2d483.3.4672-40e9-91df-b9ffd18d22b8",
+      "link": "http://localhost:8888/api/gen/download/c2d483.3.4672-40e9-91df-b9ffd18d22b8"
+    }
+    ```
+  </Step>
+
+  <Step title="Download the generated archive">
+    Use the `code` value from the previous response to download the zip:
+
+    ```bash
+    wget http://localhost:8888/api/gen/download/c2d483.3.4672-40e9-91df-b9ffd18d22b8
+    ```
+  </Step>
+
+  <Step title="Unzip the generated code">
+    ```bash
+    unzip c2d483.3.4672-40e9-91df-b9ffd18d22b8
+    ```
+  </Step>
+
+  <Step title="Stop and remove the container">
+    ```bash
+    docker stop ${CID} && docker rm ${CID}
+    ```
+  </Step>
+</Steps>
+
+## Generating with Custom Options
+
+### Discover Available Options
+
+Retrieve the full list of configurable options for any generator before making a generation request:
+
+```bash
+curl http://localhost:8888/api/gen/clients/python
+```
+
+Example response showing some Python client options:
+
+```json
+{
+  "packageName": {
+    "opt": "packageName",
+    "description": "python package name (convention: snake_case).",
+    "type": "string",
+    "default": "openapi_client"
+  },
+  "packageVersion": {
+    "opt": "packageVersion",
+    "description": "python package version.",
+    "type": "string",
+    "default": "1.0.0"
+  },
+  "sortParamsByRequiredFlag": {
+    "opt": "sortParamsByRequiredFlag",
+    "description": "Sort method arguments to place required parameters before optional parameters.",
+    "type": "boolean",
+    "default": "true"
+  }
+}
+```
+
+### Passing Options in the Request Body
+
+Include an `options` object alongside `openAPIUrl` to customize the generated output:
+
+```bash
+curl -H "Content-type: application/json" \
+    -X POST \
+    -d '{
+      "options": {
+        "packageName": "pet_store"
+      },
+      "openAPIUrl": "https://raw.githubusercontent.com/openapitools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml"
+    }' \
+    http://localhost:8888/api/gen/clients/python
+```
+
+### Inlining the Spec
+
+Instead of providing a URL, embed the spec directly in the request payload using the `spec` key:
+
+```json
+{
+  "options": {},
+  "spec": {
+    "swagger": "2.0",
+    "info": {
+      "version": "1.0.0",
+      "title": "Test API"
+    }
+  }
+}
+```
+
+<Tip>
+  Use `spec` instead of `openAPIUrl` when your spec is not publicly accessible, for example during local development or in air-gapped environments.
+</Tip>
+
+## Self-Hosting from Source
+
+If you prefer to build and run the service directly from source instead of using Docker:
+
+```bash
+mvn clean install
+cd modules/openapi-generator-online
+mvn spring-boot:run
+```
+
+The service starts on port `8080` by default. Send generation requests to `http://localhost:8080/api/gen/clients/{language}` or `http://localhost:8080/api/gen/servers/{framework}`.
+
+### Example: Generate a Ruby Client from a Running Local Service
+
+```bash
+curl -X POST \
+  -H "content-type:application/json" \
+  -d '{"openAPIUrl": "https://raw.githubusercontent.com/openapitools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml"}' \
+  http://localhost:8080/api/gen/clients/ruby
+```

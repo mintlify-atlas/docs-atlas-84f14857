@@ -1,0 +1,188 @@
+---
+title: File post-processing
+description: Automatically run external tools—formatters, linters, or custom scripts—on every file that OpenAPI Generator writes.
+---
+
+File post-processing lets you pipe every generated file through an external program immediately after it is written. Common uses include auto-formatting code with `gofmt`, linting with `rubocop`, or running `prettier` over TypeScript output. The feature is opt-in and is supported by the CLI and all official plugins.
+
+## How it works
+
+When post-processing is enabled, the generator invokes the command stored in a language-specific environment variable once for each output file, passing the file's absolute path as the final argument. Files are processed one at a time. The external command can be any executable or script, including a wrapper that chains multiple tools together.
+
+<Note>
+  You must both set the environment variable **and** pass the enable flag to the tool. Requiring both steps is an intentional security measure—accidentally running arbitrary binaries on generated files is prevented unless you explicitly opt in.
+</Note>
+
+## Enabling post-processing
+
+<CodeGroup>
+
+```bash CLI
+export GO_POST_PROCESS_FILE="/usr/local/bin/gofmt -w"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g go \
+  -i petstore.yaml \
+  -o ./out
+```
+
+```xml Maven plugin
+<configuration>
+  <generatorName>go</generatorName>
+  <enablePostProcessFile>true</enablePostProcessFile>
+</configuration>
+```
+
+```kotlin Gradle plugin
+openApiGenerate {
+  generatorName.set("go")
+  enablePostProcessFile.set(true)
+}
+```
+
+</CodeGroup>
+
+The CLI flag is `--enable-post-process-file`. The plugin option is `enablePostProcessFile`.
+
+## Supported environment variables
+
+Each generator checks for its own named variable. Set only the one that matches your target language.
+
+| Environment variable | Generator(s) |
+|---|---|
+| `AVRO_POST_PROCESS_FILE` | Avro |
+| `CPP_POST_PROCESS_FILE` | C++ |
+| `CSHARP_POST_PROCESS_FILE` | C# |
+| `C_POST_PROCESS_FILE` | C |
+| `DART_POST_PROCESS_FILE` | Dart |
+| `FSHARP_POST_PROCESS_FILE` | F# |
+| `GO_POST_PROCESS_FILE` | Go |
+| `HASKELL_POST_PROCESS_FILE` | Haskell |
+| `JAVA_POST_PROCESS_FILE` | Java |
+| `JS_POST_PROCESS_FILE` | JavaScript |
+| `KOTLIN_POST_PROCESS_FILE` | Kotlin |
+| `OCAML_POST_PROCESS_FILE` | OCaml |
+| `PERL_POST_PROCESS_FILE` | Perl |
+| `PHP_POST_PROCESS_FILE` | PHP |
+| `POWERSHELL_POST_PROCESS_FILE` | PowerShell |
+| `PYTHON_POST_PROCESS_FILE` | Python |
+| `RUBY_POST_PROCESS_FILE` | Ruby |
+| `RUST_POST_PROCESS_FILE` | Rust |
+| `SCALA_POST_PROCESS_FILE` | Scala |
+| `SWIFT_POST_PROCESS_FILE` | Swift |
+| `TS_POST_PROCESS_FILE` | TypeScript |
+
+## Examples
+
+### Ruby — Rubocop
+
+[Rubocop](https://rubocop.org) is a Ruby linter and auto-formatter. The `-a` flag applies safe auto-corrections.
+
+```bash
+export RUBY_POST_PROCESS_FILE="/usr/local/bin/rubocop -a"
+export OPENAPI_DOC="https://raw.githubusercontent.com/openapitools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -i $OPENAPI_DOC \
+  -g ruby \
+  -o .out-ruby/
+```
+
+As files are written you will see messages like:
+
+```text
+[main] INFO  o.o.codegen.TemplateManager - writing file /Users/jim/projects/.out-ruby/spec/spec_helper.rb
+[main] INFO  o.o.c.languages.AbstractRubyCodegen - Successfully executed: /usr/local/bin/rubocop -a /Users/jim/projects/.out-ruby/spec/spec_helper.rb
+[main] INFO  o.o.codegen.TemplateManager - writing file /Users/jim/projects/.out-ruby/spec/configuration_spec.rb
+[main] INFO  o.o.c.languages.AbstractRubyCodegen - Successfully executed: /usr/local/bin/rubocop -a /Users/jim/projects/.out-ruby/spec/configuration_spec.rb
+```
+
+### Go — gofmt
+
+```bash
+export GO_POST_PROCESS_FILE="/usr/local/go/bin/gofmt -w"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g go \
+  -i petstore.yaml \
+  -o ./out-go
+```
+
+### TypeScript — Prettier
+
+```bash
+export TS_POST_PROCESS_FILE="./node_modules/.bin/prettier --write"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g typescript-axios \
+  -i petstore.yaml \
+  -o ./out-ts
+```
+
+### Java — google-java-format
+
+```bash
+export JAVA_POST_PROCESS_FILE="java -jar google-java-format.jar --replace"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g java \
+  -i petstore.yaml \
+  -o ./out-java
+```
+
+### Python — black
+
+```bash
+export PYTHON_POST_PROCESS_FILE="black"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g python \
+  -i petstore.yaml \
+  -o ./out-python
+```
+
+## Using a custom script
+
+Because the environment variable value is executed as a command with the file path appended, you can point it at any script. This is useful when you want to chain multiple tools:
+
+```bash
+#!/usr/bin/env bash
+# format-go-file.sh
+set -e
+gofmt -w "$1"
+goimports -w "$1"
+staticcheck "$1"
+```
+
+```bash
+chmod +x format-go-file.sh
+export GO_POST_PROCESS_FILE="./format-go-file.sh"
+
+openapi-generator generate \
+  --enable-post-process-file \
+  -g go \
+  -i petstore.yaml \
+  -o ./out-go
+```
+
+<Tip>
+  Make your script exit with a non-zero status code on failure. The generator logs success and failure messages and will report when a post-processing command fails.
+</Tip>
+
+## Behavior details
+
+- Post-processing runs **after** each file is written to disk, not in a separate pass at the end.
+- Files are processed **sequentially**, one at a time.
+- If the external command exits with a non-zero status, the generator logs a failure but continues generating the remaining files.
+- Files skipped due to `.openapi-generator-ignore` rules or `--skip-overwrite` are **not** passed to the post-processor.
+- The environment variable value and the file path are concatenated with a space: `$ENV_VAR $FILE_PATH`. Ensure your command accepts a file path as its last positional argument.
+
+<Warning>
+  On Windows, path separators in the file path argument will use backslashes. If your post-processing script is a shell script, make sure it handles Windows paths correctly or use WSL.
+</Warning>

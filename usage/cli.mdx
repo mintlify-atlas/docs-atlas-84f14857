@@ -1,0 +1,673 @@
+---
+title: CLI reference
+description: Complete reference for every OpenAPI Generator CLI command, with synopsis, options, and examples.
+---
+
+Options for OpenAPI Generator are the same whether you use the CLI, Maven/Gradle plugins, or the online generator. This page documents every CLI command and its flags.
+
+<Tip>
+  Run `openapi-generator-cli help <command>` at any time to see full usage for a specific command.
+</Tip>
+
+## help
+
+Lists all available commands.
+
+```bash
+openapi-generator-cli help
+```
+
+```text
+usage: openapi-generator-cli <command> [<args>]
+
+The most commonly used openapi-generator-cli commands are:
+    author        Utilities for authoring generators or customizing templates.
+    batch         Generate code in batch via external configs.
+    config-help   Config help for chosen lang
+    generate      Generate code with the specified generator.
+    help          Display help information about openapi-generator
+    list          Lists the available generators
+    meta          MetaGenerator. Generator for creating a new template set and configuration for Codegen.
+    validate      Validate specification
+    version       Show version information used in tooling
+
+See 'openapi-generator-cli help <command>' for more information on a specific command.
+```
+
+---
+
+## version
+
+Returns version information for the installed tooling.
+
+```text
+SYNOPSIS
+    openapi-generator-cli version [--full] [--sha]
+
+OPTIONS
+    --full    Full version details
+    --sha     Git commit SHA version
+```
+
+---
+
+## list
+
+Lists every available generator. Pass `-s/--short` for CSV output suitable for scripting.
+
+```text
+SYNOPSIS
+    openapi-generator-cli list [(-i <include> | --include <include>)]
+            [(-s | --short)]
+
+OPTIONS
+    -i <include>, --include <include>
+        Comma-separated list of stability indexes to include.
+        Values: all, beta, stable, experimental, deprecated.
+        Excludes deprecated by default.
+
+    -s, --short
+        Shortened output (suitable for scripting).
+```
+
+**Example** — print each generator name on its own line:
+
+```bash
+openapi-generator-cli list -s | tr ',' '\n'
+```
+
+For the full list of generators, see the [Generators](/generators) reference.
+
+---
+
+## validate
+
+Validates an input specification and optionally suggests fixes.
+
+```text
+SYNOPSIS
+    openapi-generator-cli validate
+            (-i <spec file> | --input-spec <spec file>) [--recommend]
+
+OPTIONS
+    -i <spec file>, --input-spec <spec file>
+        Location of the OpenAPI spec, as URL or file (required).
+
+    --recommend
+        Provide recommendations for improvement alongside any errors.
+```
+
+**Valid spec:**
+
+```bash
+openapi-generator-cli validate -i petstore-v3.0.yaml
+```
+
+```text
+Validating spec (petstore-v3.0.yaml)
+No validation issues detected.
+```
+
+**Invalid spec:**
+
+```bash
+openapi-generator-cli validate -i petstore-v3.0-invalid.yaml
+```
+
+```text
+Validating spec (petstore-v3.0-invalid.yaml)
+Errors:
+	-attribute info is missing
+
+[error] Spec has 1 errors.
+```
+
+---
+
+## generate
+
+The primary command for code generation. At minimum, provide `-i`, `-g`, and `-o`.
+
+```text
+SYNOPSIS
+    openapi-generator-cli generate
+            (-i <spec file> | --input-spec <spec file>)
+            (-g <generator name> | --generator-name <generator name>)
+            (-o <output directory> | --output <output directory>)
+            [(-c <configuration file> | --config <configuration file>)]
+            [(-t <template directory> | --template-dir <template directory>)]
+            [--global-property <global properties>...]
+            [(-p <additional properties> | --additional-properties <additional properties>)...]
+            ... (see full options below)
+```
+
+<Note>
+  You may also pass `-Dcolor` as a JVM system property to colorize terminal output.
+</Note>
+
+### Core flags
+
+<ParamField path="body.-i / --input-spec" type="string" required>
+  Location of the OpenAPI spec, as a URL or local file path. Required unless loaded via `-c`.
+</ParamField>
+
+<ParamField path="body.-g / --generator-name" type="string" required>
+  The generator to use. See the `list` command for available values.
+</ParamField>
+
+<ParamField path="body.-o / --output" type="string">
+  Directory where generated files are written. Defaults to the current directory.
+</ParamField>
+
+<ParamField path="body.-c / --config" type="string">
+  Path to a JSON or YAML configuration file containing generator options. Run `config-help -g <generator>` to see supported keys.
+</ParamField>
+
+<ParamField path="body.-t / --template-dir" type="string">
+  Folder containing custom Mustache/Handlebars template files.
+</ParamField>
+
+<ParamField path="body.-p / --additional-properties" type="string">
+  Generator-specific options in `name=value,name=value` format. Repeatable.
+</ParamField>
+
+<ParamField path="body.--global-property" type="string">
+  Sets global properties (cross-cutting controls) in `name=value` format. Repeatable. See [Global properties](/usage/global-properties).
+</ParamField>
+
+### Examples
+
+**Minimal generation:**
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g go \
+    -o out/
+```
+
+**Additional properties:**
+
+```bash
+openapi-generator-cli generate \
+    -g go \
+    --additional-properties=prependFormOrBodyParameters=true \
+    -o out/ \
+    -i petstore.yaml
+```
+
+Multiple properties as comma-separated pairs:
+
+```bash
+openapi-generator-cli generate \
+    -g go \
+    --additional-properties=key1=value1,key2=value2 \
+    -o out/ \
+    -i petstore.yaml
+```
+
+**External config file (JSON):**
+
+```json config.json
+{
+  "npmName": "@swagger/typescript-fetch-petstore",
+  "npmVersion": "1.0.0",
+  "npmRepository": "https://skimdb.npmjs.com/registry",
+  "snapshot": false,
+  "supportsES6": true
+}
+```
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g typescript-fetch \
+    -o out/ \
+    -c config.json
+```
+
+**External config file (YAML):**
+
+```yaml config.yaml
+npmName: "@swagger/typescript-fetch-petstore"
+npmVersion: "1.0.0"
+npmRepository: "https://skimdb.npmjs.com/registry"
+snapshot: false
+supportsES6: true
+```
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g typescript-fetch \
+    -o out/ \
+    -c config.yaml
+```
+
+**Type and import mappings** — change `kotlin-spring` default `OffsetDateTime` to `LocalDateTime`:
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g kotlin-spring \
+    -o out/ \
+    --additional-properties=library=spring-boot,beanValidations=true,serviceImplementation=true \
+    --import-mappings=DateTime=java.time.LocalDateTime \
+    --type-mappings=DateTime=java.time.LocalDateTime
+```
+
+**Target an external model** — treat `Pet` as a primitive type and supply its import path:
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g java \
+    -o out/ \
+    --language-specific-primitives=Pet \
+    --import-mappings=Pet=com.yourpackage.models.Pet
+```
+
+Multiple import mappings as comma-separated pairs:
+
+```bash
+--import-mappings=Pet=com.yourpackage.models.Pet,User=com.yourpackage.models.User
+```
+
+### Additional flags
+
+<AccordionGroup>
+  <Accordion title="Authentication and remote specs">
+    <ParamField path="body.-a / --auth" type="string">
+      URL-encoded `name:header` pairs for authenticating remote spec fetches. Multiple values are comma-separated.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Naming and package options">
+    <ParamField path="body.--api-name-suffix" type="string">
+      Suffix appended to all API names (tags). Default: `Api`. E.g. `Pet` → `PetApi`.
+    </ParamField>
+
+    <ParamField path="body.--api-package" type="string">
+      Package for generated API classes.
+    </ParamField>
+
+    <ParamField path="body.--model-package" type="string">
+      Package for generated model classes.
+    </ParamField>
+
+    <ParamField path="body.--invoker-package" type="string">
+      Root package for all generated code.
+    </ParamField>
+
+    <ParamField path="body.--package-name" type="string">
+      Package name for generated classes (where supported).
+    </ParamField>
+
+    <ParamField path="body.--model-name-prefix" type="string">
+      Prefix prepended to all model names.
+    </ParamField>
+
+    <ParamField path="body.--model-name-suffix" type="string">
+      Suffix appended to all model names.
+    </ParamField>
+
+    <ParamField path="body.--artifact-id" type="string">
+      `artifactId` in generated `pom.xml` and part of the library filename.
+    </ParamField>
+
+    <ParamField path="body.--artifact-version" type="string">
+      Artifact version in generated `pom.xml` and part of the library filename.
+    </ParamField>
+
+    <ParamField path="body.--group-id" type="string">
+      `groupId` in generated `pom.xml`.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Git and release options">
+    <ParamField path="body.--git-host" type="string">
+      Git host, e.g. `gitlab.com`.
+    </ParamField>
+
+    <ParamField path="body.--git-repo-id" type="string">
+      Git repository ID, e.g. `openapi-generator`.
+    </ParamField>
+
+    <ParamField path="body.--git-user-id" type="string">
+      Git user ID, e.g. `openapitools`.
+    </ParamField>
+
+    <ParamField path="body.--release-note" type="string">
+      Release note text. Defaults to `Minor update`.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Type and mapping options">
+    <ParamField path="body.--type-mappings" type="string">
+      Maps OpenAPI spec types to generated code types: `OpenAPIType=generatedType,...`. Repeatable.
+    </ParamField>
+
+    <ParamField path="body.--import-mappings" type="string">
+      Maps a class to the import that should be used: `type=import,...`. Repeatable.
+    </ParamField>
+
+    <ParamField path="body.--instantiation-types" type="string">
+      Sets instantiation type mappings: `type=instantiatedType,...`. E.g. `array=ArrayList,map=HashMap`.
+    </ParamField>
+
+    <ParamField path="body.--language-specific-primitives" type="string">
+      Additional language-specific primitive types: `type1,type2,...`. These are excluded from model generation.
+    </ParamField>
+
+    <ParamField path="body.--reserved-words-mappings" type="string">
+      Specifies how reserved names should be escaped: `id=identifier`. Otherwise `_<name>` is used.
+    </ParamField>
+
+    <ParamField path="body.--generate-alias-as-model" type="boolean">
+      Generate model implementations for aliases to map and array schemas.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Template and engine options">
+    <ParamField path="body.-e / --engine" type="string">
+      Templating engine. Options: `mustache` (default) or `handlebars` (beta).
+    </ParamField>
+
+    <ParamField path="body.--library" type="string">
+      Library sub-template to use.
+    </ParamField>
+
+    <ParamField path="body.--enable-post-process-file" type="boolean">
+      Enable post-processing of generated files via environment-variable-defined scripts. See [File post-processing](/customization/file-post-processing).
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Spec and validation options">
+    <ParamField path="body.--skip-validate-spec" type="boolean">
+      Skip validation of the input specification before generation.
+    </ParamField>
+
+    <ParamField path="body.--strict-spec" type="string">
+      `true` or `false`. When `true`, `MUST` and `SHALL` wording in the OpenAPI spec is strictly enforced.
+    </ParamField>
+
+    <ParamField path="body.--legacy-discriminator-behavior" type="boolean">
+      Set to `false` for generators with improved discriminator support (Python, Java, Go, PowerShell, C# enable this by default).
+    </ParamField>
+
+    <ParamField path="body.--skip-operation-example" type="boolean">
+      Skip examples defined in operations to avoid out-of-memory errors.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Output and debugging options">
+    <ParamField path="body.--dry-run" type="boolean">
+      Report on potential changes without writing any files.
+    </ParamField>
+
+    <ParamField path="body.--minimal-update" type="boolean">
+      Only write output files that have changed.
+    </ParamField>
+
+    <ParamField path="body.-s / --skip-overwrite" type="boolean">
+      Do not overwrite existing files during generation.
+    </ParamField>
+
+    <ParamField path="body.--ignore-file-override" type="string">
+      Override location for the `.openapi-generator-ignore` file. Useful on initial generation.
+    </ParamField>
+
+    <ParamField path="body.--log-to-stderr" type="boolean">
+      Write all log messages (not just errors) to STDOUT. Useful for piping debug JSON output (e.g. `--global-property debugOperations`) to an external parser.
+    </ParamField>
+
+    <ParamField path="body.-v / --verbose" type="boolean">
+      Verbose mode.
+    </ParamField>
+  </Accordion>
+
+  <Accordion title="Server and HTTP options">
+    <ParamField path="body.--server-variables" type="string">
+      Overrides server variables for specs that support variable templating of servers.
+    </ParamField>
+
+    <ParamField path="body.--http-user-agent" type="string">
+      HTTP user agent. Defaults to `OpenAPI-Generator/{packageVersion}/{language}`.
+    </ParamField>
+
+    <ParamField path="body.--remove-operation-id-prefix" type="boolean">
+      Remove the prefix from `operationId`. E.g. `config_getId` → `getId`.
+    </ParamField>
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## batch
+
+Runs generation for multiple targets defined in YAML or JSON config files. All options supported by `generate` can be placed in these files.
+
+```text
+SYNOPSIS
+    openapi-generator-cli batch [--clean] [--fail-fast]
+            [--includes-base-dir <includes>] [(-r <threads> | --threads <threads>)]
+            [--root-dir <root>] [--timeout <timeout>] [(-v | --verbose)] [--]
+            <configs>...
+
+OPTIONS
+    --clean                    Clean output of previously written files before generation.
+    --fail-fast                Stop on the first error encountered.
+    --includes-base-dir        Base directory used for !include paths.
+    -r, --threads              Number of parallel generation threads.
+    --root-dir                 Root directory for output and includes (includes can override).
+    --timeout                  Execution timeout in minutes.
+    -v, --verbose              Verbose mode.
+    <configs>                  One or more generator configuration files.
+```
+
+<Note>
+  Config files support a special `!include` property that points to a shared base config. Since 5.0.0, multiple `!include` properties are supported — use suffixes (`!include1`, `!include2`) for uniqueness in JSON files.
+</Note>
+
+**Example:**
+
+<Steps>
+  <Step title="Create a shared base config">
+    ```bash
+    mkdir shared && cat > shared/common.yaml <<EOF
+    inputSpec: https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml
+    additionalProperties:
+        x-ext-name: "Your Name"
+    EOF
+    ```
+  </Step>
+  <Step title="Create a nested shared config">
+    ```bash
+    cat > shared/nested.yaml <<EOF
+    useCompareNetObjects: "true"
+    EOF
+    ```
+  </Step>
+  <Step title="Create per-generator configs">
+    ```yaml kotlin.yaml
+    '!include': 'shared/common.yaml'
+    outputDir: out/kotlin
+    generatorName: kotlin
+    artifactId: kotlin-petstore-string
+    additionalProperties:
+      dateLibrary: string
+      serializableModel: "true"
+    ```
+
+    ```yaml csharp.yaml
+    '!include': 'shared/common.yaml'
+    outputDir: out/csharp-netcore
+    generatorName: csharp-netcore
+    additionalProperties:
+      packageGuid: "{321C8C3F-0156-40C1-AE42-D59761FB9B6C}"
+      '!include': 'shared/nested.yaml'
+    ```
+  </Step>
+  <Step title="Run batch generation">
+    ```bash
+    openapi-generator-cli batch *.yaml
+    ```
+  </Step>
+</Steps>
+
+---
+
+## meta
+
+Creates a new Java class and template files for building a custom generator.
+
+```text
+SYNOPSIS
+    openapi-generator-cli meta [(-l <language> | --language <language>)]
+            [(-n <name> | --name <name>)]
+            [(-o <output directory> | --output <output directory>)]
+            [(-p <package> | --package <package>)] [(-t <type> | --type <type>)]
+
+OPTIONS
+    -l, --language     Implementation language for the generator class.
+    -n, --name         Human-readable name of the generator.
+    -o, --output       Where to write the generated files (current dir by default).
+    -p, --package      Package for the main class (defaults to org.openapitools.codegen).
+    -t, --type         Type of generator being created.
+```
+
+For a full walkthrough, see the [Customization](/customization) guide.
+
+---
+
+## author
+
+Utilities for authoring generators or customizing templates.
+
+```text
+SYNOPSIS
+    openapi-generator-cli author
+    openapi-generator-cli author template
+            (-g <generator name> | --generator-name <generator name>)
+            [--library <library>]
+            [(-o <output directory> | --output <output directory>)]
+            [(-v | --verbose)]
+```
+
+### author template
+
+Extracts the built-in templates for a generator to a local directory so you can modify them.
+
+```text
+OPTIONS
+    -g, --generator-name    Generator to extract templates for (required).
+    --library               Restrict extraction to a specific library sub-template.
+    -o, --output            Output directory (defaults to 'out').
+    -v, --verbose           Verbose mode.
+```
+
+**Extract templates for a specific library:**
+
+```bash
+openapi-generator-cli author template -g java --library webclient
+```
+
+**Extract all templates for a generator:**
+
+```bash
+openapi-generator-cli author template -g java
+```
+
+---
+
+## config-help
+
+Displays generator-specific configuration options.
+
+```text
+SYNOPSIS
+    openapi-generator-cli config-help
+            [(-f <output format> | --format <output format>)]
+            [(-g <generator name> | --generator-name <generator name>)]
+            [--feature-set] [--full-details]
+            [--import-mappings] [--instantiation-types]
+            [--language-specific-primitive] [--markdown-header] [--named-header]
+            [(-o <output location> | --output <output location>)]
+            [--reserved-words]
+
+OPTIONS
+    -g, --generator-name         Generator to show config help for.
+    -f, --format                 Output format: text (default), markdown, or yamlsample.
+    --feature-set                Show feature set supported by the generator.
+    --full-details               Show all config options, mappings, reserved words, etc.
+    --import-mappings            Show default import mappings.
+    --instantiation-types        Show types used to instantiate simple aliases.
+    --language-specific-primitive  Show language-specific primitive types.
+    --markdown-header            When format=markdown, include Markdown headers.
+    --named-header               Include the generator name in the output header.
+    -o, --output                 Write output to this path instead of stdout.
+    --reserved-words             Show reserved words that may cause renamed identifiers.
+```
+
+**Example** — query Go generator options:
+
+```bash
+openapi-generator-cli config-help -g go
+```
+
+```text
+CONFIG OPTIONS
+	packageName
+	    Go package name (convention: lowercase). (Default: openapi)
+
+	hideGenerationTimestamp
+	    Hides the generation timestamp when files are generated. (Default: true)
+
+	packageVersion
+	    Go package version. (Default: 1.0.0)
+
+	withGoCodegenComment
+	    whether to include Go codegen comment to disable Go Lint and collapse by
+	    default in GitHub PRs and diffs (Default: false)
+
+	withXml
+	    whether to include support for application/xml content type and include
+	    XML annotations in the model (Default: false)
+
+	prependFormOrBodyParameters
+	    Add form or body parameters to the beginning of the parameter list.
+	    (Default: false)
+```
+
+Pass these options to `generate` using `--additional-properties`:
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g go \
+    -o out/ \
+    --additional-properties=packageName=mypkg,packageVersion=2.0.0
+```
+
+---
+
+## completion
+
+Although not listed in `help` output, the CLI exposes a `completion` command for shell auto-completion scripts.
+
+```bash
+openapi-generator-cli completion config-help
+```
+
+```text
+-o
+--output
+--named-header
+-g
+--generator-name
+-f
+--format
+--markdown-header
+```
+
+A ready-to-use Bash completion script is available in the repository at `scripts/openapi-generator-cli-completion.bash`.

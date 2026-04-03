@@ -1,0 +1,160 @@
+---
+title: Node.js Express server generator
+description: Generate a Node.js Express server stub from an OpenAPI specification using the nodejs-express-server generator.
+---
+
+The `nodejs-express-server` generator produces a JavaScript server skeleton built on [Express](https://expressjs.com/). It is currently in **BETA** and may be subject to breaking changes between releases.
+
+<Warning>
+  The `nodejs-express-server` generator is in BETA. Breaking changes can occur without prior notice. Pin to a specific OpenAPI Generator version in production.
+</Warning>
+
+## Quick start
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate the server">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g nodejs-express-server \
+      -o ./my-node-server
+    ```
+  </Step>
+  <Step title="Install dependencies">
+    ```bash
+    cd my-node-server
+    npm install
+    ```
+  </Step>
+  <Step title="Start the server">
+    ```bash
+    npm start
+    ```
+
+    The server listens on port 8080 by default (or the port set in `serverPort`).
+  </Step>
+  <Step title="Implement your handlers">
+    Edit the generated service files to replace stub responses with real business logic.
+  </Step>
+</Steps>
+
+## Generated project structure
+
+```
+my-node-server/
+├── package.json
+├── index.js                    # entry point
+├── expressServer.js            # Express app setup and OpenAPI validation
+├── config.js                   # server config (port, etc.)
+├── api/
+│   └── openapi.yaml            # copy of the input spec
+├── controllers/
+│   └── PetController.js        # route handlers (generated)
+├── services/
+│   └── PetService.js           # stub service layer — add logic here
+└── utils/
+    └── openapiRouter.js        # middleware wiring controllers to spec
+```
+
+<Tip>
+  The generated `services/` directory is where you add your business logic. The `controllers/` files are regenerated on each run, so avoid editing them directly.
+</Tip>
+
+## How the generated server works
+
+The generator uses the OpenAPI specification at runtime (via `express-openapi-validator`) to validate incoming requests and route them to the correct controller. Controllers call through to service stubs that you implement.
+
+A generated service stub looks like this:
+
+```javascript
+// services/PetService.js
+
+/**
+ * Find pet by ID
+ * @param {Number} petId - ID of pet to return
+ * @returns {Promise<Pet>}
+ */
+exports.getPetById = async function(petId) {
+  // TODO: implement
+  throw new Error('Not implemented');
+};
+```
+
+Replace the `throw` with your real implementation:
+
+```javascript
+exports.getPetById = async function(petId) {
+  const pet = await db.pets.findById(petId);
+  if (!pet) {
+    const err = new Error('Pet not found');
+    err.status = 404;
+    throw err;
+  }
+  return pet;
+};
+```
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `serverPort` | integer | `null` | TCP port the server listens on |
+| `ensureUniqueParams` | boolean | `true` | Rename duplicate parameter names within an operation |
+| `sortModelPropertiesByRequiredFlag` | boolean | `true` | Place required properties before optional ones in models |
+| `sortParamsByRequiredFlag` | boolean | `true` | Place required parameters before optional ones in methods |
+| `allowUnicodeIdentifiers` | boolean | `false` | Allow unicode characters in identifiers |
+
+Pass options via `--additional-properties`:
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g nodejs-express-server \
+  -o ./server \
+  --additional-properties=serverPort=3000
+```
+
+Or in a configuration file:
+
+```yaml
+generatorName: nodejs-express-server
+inputSpec: openapi.yaml
+outputDir: ./server
+
+additionalProperties:
+  serverPort: 3000
+  sortParamsByRequiredFlag: true
+```
+
+## Customizing the Express app
+
+The entry point `expressServer.js` is generated once and is safe to edit. You can add middleware, authentication, error handlers, or database connections there:
+
+```javascript
+// expressServer.js (customised excerpt)
+const express = require('express');
+const app = express();
+
+// add your own middleware
+app.use(require('./middleware/auth'));
+app.use(require('./middleware/logger'));
+
+// generated routing is applied after your middleware
+```
+
+## Supported features
+
+- JSON request/response bodies
+- Path, query, and header parameters
+- Cookie parameters (OAS3)
+- OAuth2 Implicit flow
+- Form parameters (url-encoded and multipart)
+
+<Note>
+  The `nodejs-express-server` generator does not currently support XML wire format, authentication schemes other than OAuth2 Implicit, or schema polymorphism (`oneOf` / `anyOf` / `allOf`).
+</Note>

@@ -1,0 +1,207 @@
+---
+title: Python Client Generator
+description: Generate a Python 3.10+ client SDK from an OpenAPI specification using urllib3, asyncio, or httpx transport backends.
+---
+
+The `python` generator produces a Python client library with full type annotations based on Pydantic v2. It requires **Python 3.10 or later** and uses `urllib3` as the default HTTP transport.
+
+| Property | Value |
+|----------|-------|
+| Generator name | `python` |
+| Stability | STABLE |
+| Generator type | CLIENT |
+| Language version | Python 3.10+ |
+| Default templating engine | mustache |
+
+## Available libraries (transport backends)
+
+The `library` option selects the underlying HTTP transport. The default is `urllib3`.
+
+| Library | Description |
+|---------|-------------|
+| `urllib3` | **Default.** Synchronous HTTP using `urllib3`. No additional runtime dependencies. |
+| `asyncio` | Asynchronous HTTP using `asyncio` and `aiohttp`. Returns coroutines from API methods. |
+| `httpx` | Supports both synchronous and asynchronous usage via `httpx`. |
+| `tornado` | Tornado-based async transport. **Deprecated.** |
+
+<Note>
+  `tornado` is deprecated. Prefer `asyncio` or `httpx` for async workloads.
+</Note>
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `library` | Enum | `urllib3` | HTTP transport: `urllib3`, `asyncio`, `httpx`, `tornado` |
+| `packageName` | String | `openapi_client` | Python package name (snake_case convention) |
+| `packageVersion` | String | `1.0.0` | Package version |
+| `packageUrl` | String | `null` | Package URL for `setup.py` / `pyproject.toml` |
+| `projectName` | String | `null` | Project name in `setup.py` (e.g. `petstore-api`) |
+| `generateSourceCodeOnly` | Boolean | `false` | Generate only the library source, skip project files |
+| `hideGenerationTimestamp` | Boolean | `true` | Omit the generation timestamp from generated files |
+| `lazyImports` | Boolean | `false` | Enable lazy imports for faster module load times |
+| `dateFormat` | String | `%Y-%m-%d` | Date format string for query parameters |
+| `datetimeFormat` | String | `%Y-%m-%dT%H:%M:%S%z` | Datetime format string for query parameters |
+| `mapNumberTo` | Enum | `Union[StrictFloat, StrictInt]` | How to map OpenAPI `number` type: `Union[StrictFloat, StrictInt]`, `StrictStr`, or `float` |
+| `useOneOfDiscriminatorLookup` | Boolean | `false` | Use discriminator mapping for faster oneOf model lookup (skips full validation) |
+| `setEnsureAsciiToFalse` | Boolean | `false` | Set `ensure_ascii=False` in `json.dumps` for request bodies |
+| `recursionLimit` | Integer | `null` | Override Python's default recursion limit |
+| `poetry1` | Boolean | `null` | Format `pyproject.toml` for Poetry 1.x |
+| `disallowAdditionalPropertiesIfNotPresent` | Boolean | `true` | When `true`, unknown properties are ignored by default (non-compliant with OAS spec) |
+
+## Generation example
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate with urllib3 (default)">
+    ```bash
+    openapi-generator-cli generate \
+      -i https://petstore3.swagger.io/api/v3/openapi.json \
+      -g python \
+      -o ./petstore-python-client \
+      --additional-properties=packageName=petstore_client,packageVersion=1.0.0
+    ```
+  </Step>
+  <Step title="Generate with asyncio transport">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g python \
+      -o ./petstore-async-client \
+      --additional-properties=packageName=petstore_async,library=asyncio
+    ```
+  </Step>
+  <Step title="Generate with httpx transport">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g python \
+      -o ./petstore-httpx-client \
+      --additional-properties=packageName=petstore_httpx,library=httpx
+    ```
+  </Step>
+</Steps>
+
+## Generated project structure
+
+```
+petstore-python-client/
+├── pyproject.toml
+├── setup.py
+├── setup.cfg
+├── requirements.txt
+├── README.md
+├── petstore_client/
+│   ├── __init__.py              # Public exports
+│   ├── api_client.py            # ApiClient (HTTP transport, auth, serialization)
+│   ├── configuration.py         # Configuration class
+│   ├── exceptions.py            # ApiException and subclasses
+│   ├── rest.py                  # Low-level REST layer
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── pet_api.py           # PetApi class — one per OpenAPI tag
+│   └── models/
+│       ├── __init__.py
+│       ├── pet.py               # Pet Pydantic model
+│       └── category.py
+└── test/
+    └── test_pet_api.py          # Generated test stubs
+```
+
+## Installation
+
+After generating, install the client from the generated directory:
+
+```bash
+# Install from local directory
+pip install ./petstore-python-client
+
+# Or install in editable mode during development
+pip install -e ./petstore-python-client
+```
+
+## Using the generated client
+
+### Synchronous (urllib3)
+
+```python
+import petstore_client
+from petstore_client.api import pet_api
+from petstore_client.model.pet import Pet
+
+# Configure the client
+configuration = petstore_client.Configuration(
+    host="https://petstore3.swagger.io/api/v3"
+)
+
+# Optional: API key authentication
+configuration.api_key["api_key"] = "YOUR_API_KEY"
+
+# Optional: Bearer token
+configuration.access_token = "YOUR_BEARER_TOKEN"
+
+with petstore_client.ApiClient(configuration) as api_client:
+    pet_api_instance = pet_api.PetApi(api_client)
+
+    # Get pet by ID
+    pet = pet_api_instance.get_pet_by_id(pet_id=1)
+    print(f"Pet name: {pet.name}")
+
+    # Add a new pet
+    new_pet = Pet(
+        name="Fluffy",
+        photo_urls=["https://example.com/fluffy.jpg"],
+        status="available",
+    )
+    created = pet_api_instance.add_pet(pet=new_pet)
+    print(f"Created pet ID: {created.id}")
+```
+
+### Asynchronous (asyncio)
+
+```python
+import asyncio
+import petstore_async
+from petstore_async.api import pet_api
+
+configuration = petstore_async.Configuration(
+    host="https://petstore3.swagger.io/api/v3"
+)
+
+async def main():
+    async with petstore_async.ApiClient(configuration) as api_client:
+        api = pet_api.PetApi(api_client)
+        pet = await api.get_pet_by_id(pet_id=1)
+        print(f"Pet: {pet.name}")
+
+asyncio.run(main())
+```
+
+### Exception handling
+
+```python
+from petstore_client.exceptions import ApiException
+
+try:
+    pet = pet_api_instance.get_pet_by_id(pet_id=9999)
+except ApiException as e:
+    print(f"API error {e.status}: {e.reason}")
+    print(f"Response body: {e.body}")
+```
+
+## Related generators
+
+| Generator | Notes |
+|-----------|-------|
+| `python-pydantic-v1` | Produces a Python client using Pydantic v1 models instead of v2. Use when your project is still on Pydantic v1. |
+| `python-fastapi` | Server generator — produces a FastAPI app with Pydantic v2 request/response models (beta). |
+| `python-flask` | Server generator — produces a Flask app stub. |
+| `python-aiohttp` | Server generator — produces an aiohttp server stub. |
+
+<Tip>
+  If you are migrating from Pydantic v1 to v2, generate with `python` (the default, Pydantic v2 client) and run `pydantic v1` compatibility shims only where needed, rather than using the `python-pydantic-v1` generator.
+</Tip>

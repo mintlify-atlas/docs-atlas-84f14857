@@ -1,0 +1,286 @@
+---
+title: Generators
+description: Overview of all OpenAPI Generator generators — clients, servers, documentation, and schema generators.
+---
+
+OpenAPI Generator can produce client SDKs, server stubs, documentation, and schema artifacts from a single OpenAPI specification. Each target language or framework is handled by a dedicated **generator** identified by its generator name.
+
+## Generator categories
+
+<CardGroup cols={2}>
+  <Card title="Client generators" icon="code">
+    Generate fully-typed HTTP client SDKs in 50+ languages. Clients handle authentication, serialization, and request lifecycle out of the box.
+  </Card>
+  <Card title="Server generators" icon="server">
+    Generate server stubs and framework scaffolding. Implement the generated interfaces to wire your business logic with the correct contract.
+  </Card>
+  <Card title="Documentation generators" icon="book-open">
+    Render your OpenAPI spec as HTML, AsciiDoc, Markdown, PlantUML diagrams, and more — without writing a line of markup by hand.
+  </Card>
+  <Card title="Schema generators" icon="database">
+    Transform your OpenAPI spec into alternative schema formats: Avro, GraphQL, MySQL, PostgreSQL, Protobuf, Postman collections, and others.
+  </Card>
+</CardGroup>
+
+## Stability levels
+
+Every generator declares a stability level that reflects how production-ready its output is.
+
+| Level | Meaning |
+|-------|---------|
+| **STABLE** | Actively maintained, production-ready, breaking changes follow semver. |
+| **BETA** | Functional and community-supported, but the generated API may change between releases. |
+| **EXPERIMENTAL** | Early-stage or proof-of-concept. Breaking changes can happen at any time. |
+| **DEPRECATED** | Still present but no longer recommended. Will be removed in a future release. |
+
+## Listing generators
+
+```bash
+# List all available generators
+openapi-generator-cli list
+
+# List only client generators
+openapi-generator-cli list --include client
+
+# List only server generators
+openapi-generator-cli list --include server
+```
+
+## Getting help for a specific generator
+
+```bash
+# Show all config options for the java generator
+openapi-generator-cli config-help -g java
+
+# Output config options as markdown
+openapi-generator-cli config-help -g typescript-axios -f markdown
+
+# Output config options as YAML sample
+openapi-generator-cli config-help -g typescript-axios -f yamlsample
+```
+
+---
+
+## Client generators
+
+Client generators produce SDK libraries that call a remote API. Choose the generator that matches your target language and preferred HTTP library.
+
+### Featured client generators
+
+<CardGroup cols={3}>
+  <Card title="Java" icon="java" href="/generators/clients/java">
+    Multiple HTTP libraries: OkHttp, Jersey 2/3, Feign, RestTemplate, WebClient, Retrofit 2, and more.
+  </Card>
+  <Card title="TypeScript" icon="code" href="/generators/clients/typescript">
+    Generators for Axios, Fetch, Angular, Node, NestJS, RxJS, and others.
+  </Card>
+  <Card title="Python" icon="python" href="/generators/clients/python">
+    Supports urllib3, asyncio, and httpx transport backends. Requires Python 3.10+.
+  </Card>
+  <Card title="Go" icon="code" href="/generators/clients/go">
+    Idiomatic Go client with `go.mod` support, Marshal/Unmarshal helpers, and optional interface generation.
+  </Card>
+  <Card title="Kotlin" icon="code" href="/generators/clients/kotlin">
+    JVM and multiplatform clients using OkHttp4, Retrofit2, Ktor, Spring WebClient, and Vert.x.
+  </Card>
+  <Card title="C#" icon="code">
+    HttpClient-based client with .NET Standard and .NET 6+ support.
+  </Card>
+</CardGroup>
+
+### Full client generator list
+
+| Generator | Stability | Language |
+|-----------|-----------|----------|
+| ada | STABLE | Ada |
+| android | STABLE | Java/Android |
+| apex | STABLE | Apex |
+| bash | STABLE | Bash |
+| c | STABLE | C |
+| clojure | STABLE | Clojure |
+| cpp-oatpp-client | STABLE | C++ |
+| cpp-qt-client | STABLE | C++ |
+| cpp-restsdk | STABLE | C++ |
+| cpp-tiny | BETA | C++ |
+| cpp-tizen | STABLE | C++ |
+| cpp-ue4 | BETA | C++ |
+| crystal | BETA | Crystal |
+| csharp | STABLE | C# |
+| dart | STABLE | Dart |
+| dart-dio | STABLE | Dart |
+| eiffel | STABLE | Eiffel |
+| elixir | STABLE | Elixir |
+| elm | STABLE | Elm |
+| erlang-client | STABLE | Erlang |
+| gdscript | STABLE | GDScript |
+| go | STABLE | Go |
+| groovy | STABLE | Groovy |
+| haskell-http-client | STABLE | Haskell |
+| java | STABLE | Java |
+| java-helidon-client | BETA | Java |
+| java-micronaut-client | BETA | Java |
+| javascript | STABLE | JavaScript |
+| javascript-flowtyped | STABLE | JavaScript/Flow |
+| jaxrs-cxf-client | STABLE | Java |
+| jetbrains-http-client | EXPERIMENTAL | HTTP |
+| jmeter | STABLE | JMeter |
+| julia-client | BETA | Julia |
+| k6 | BETA | k6 |
+| kotlin | STABLE | Kotlin |
+| lua | BETA | Lua |
+| objc | STABLE | Objective-C |
+| ocaml | STABLE | OCaml |
+| perl | STABLE | Perl |
+| php | STABLE | PHP |
+| php-dt | BETA | PHP |
+| php-nextgen | BETA | PHP |
+| powershell | BETA | PowerShell |
+| python | STABLE | Python |
+| python-pydantic-v1 | STABLE | Python |
+| r | STABLE | R |
+| ruby | STABLE | Ruby |
+| rust | STABLE | Rust |
+| scala-akka | STABLE | Scala |
+| scala-gatling | STABLE | Scala |
+| scala-http4s | STABLE | Scala |
+| scala-pekko | STABLE | Scala |
+| scala-sttp | STABLE | Scala |
+| scala-sttp4 | BETA | Scala |
+| swift6 | STABLE | Swift |
+| swift-combine | STABLE | Swift |
+| terraform-provider | EXPERIMENTAL | HCL |
+| typescript | EXPERIMENTAL | TypeScript |
+| typescript-angular | STABLE | TypeScript |
+| typescript-aurelia | STABLE | TypeScript |
+| typescript-axios | STABLE | TypeScript |
+| typescript-fetch | STABLE | TypeScript |
+| typescript-inversify | STABLE | TypeScript |
+| typescript-jquery | STABLE | TypeScript |
+| typescript-nestjs | EXPERIMENTAL | TypeScript |
+| typescript-node | STABLE | TypeScript |
+| typescript-redux-query | STABLE | TypeScript |
+| typescript-rxjs | STABLE | TypeScript |
+| xojo-client | STABLE | Xojo |
+| zapier | BETA | JavaScript |
+
+---
+
+## Server generators
+
+Server generators produce framework scaffolding with handler stubs for each operation defined in your spec. You implement the business logic; the generator handles routing, parameter parsing, and response serialization.
+
+### Featured server generators
+
+<CardGroup cols={3}>
+  <Card title="Spring (Java)" icon="leaf">
+    The most widely used Java server generator. Supports Spring Boot, Spring MVC, and reactive WebFlux.
+  </Card>
+  <Card title="Go server / Gin / Echo" icon="code">
+    Idiomatic Go stubs for the standard `net/http`, Gin, and Echo frameworks.
+  </Card>
+  <Card title="Kotlin Spring" icon="code">
+    Kotlin stubs for Spring Boot, including reactive and coroutine support.
+  </Card>
+  <Card title="FastAPI (Python)" icon="python">
+    Beta generator producing async FastAPI routes with Pydantic models.
+  </Card>
+  <Card title="ASP.NET Core" icon="code">
+    .NET server stubs for ASP.NET Core Web API.
+  </Card>
+  <Card title="Node.js Express" icon="code">
+    Beta generator for Express.js server stubs.
+  </Card>
+</CardGroup>
+
+### Full server generator list
+
+| Generator | Stability |
+|-----------|-----------|
+| ada-server | STABLE |
+| aspnet-fastendpoints | STABLE |
+| aspnetcore | STABLE |
+| cpp-httplib-server | STABLE |
+| cpp-oatpp-server | STABLE |
+| cpp-pistache-server | STABLE |
+| cpp-restbed-server | STABLE |
+| erlang-server | STABLE |
+| fsharp-functions | BETA |
+| fsharp-giraffe-server | BETA |
+| go-echo-server | BETA |
+| go-gin-server | STABLE |
+| go-server | STABLE |
+| graphql-nodejs-express-server | STABLE |
+| haskell | STABLE |
+| java-camel | STABLE |
+| java-helidon-server | BETA |
+| java-inflector | STABLE |
+| java-micronaut-server | BETA |
+| java-microprofile | STABLE |
+| java-msf4j | STABLE |
+| java-play-framework | STABLE |
+| java-undertow-server | STABLE |
+| java-vertx-web | BETA |
+| java-wiremock | BETA |
+| jaxrs-cxf | STABLE |
+| jaxrs-jersey | STABLE |
+| jaxrs-resteasy | STABLE |
+| jaxrs-spec | STABLE |
+| kotlin-misk | STABLE |
+| kotlin-server | STABLE |
+| kotlin-spring | STABLE |
+| kotlin-vertx | BETA |
+| nodejs-express-server | BETA |
+| php-laravel | STABLE |
+| php-slim4 | STABLE |
+| php-symfony | STABLE |
+| python-aiohttp | STABLE |
+| python-fastapi | BETA |
+| python-flask | STABLE |
+| ruby-on-rails | STABLE |
+| ruby-sinatra | STABLE |
+| rust-axum | BETA |
+| rust-server | STABLE |
+| scala-akka-http-server | BETA |
+| scala-finch | STABLE |
+| scala-play-server | STABLE |
+| spring | STABLE |
+| typescript-nestjs-server | BETA |
+
+---
+
+## Documentation generators
+
+| Generator | Stability | Output format |
+|-----------|-----------|---------------|
+| asciidoc | STABLE | AsciiDoc |
+| cwiki | STABLE | Confluence wiki |
+| dynamic-html | STABLE | Interactive HTML |
+| html | STABLE | Static HTML |
+| html2 | STABLE | Static HTML (alternate template) |
+| markdown | BETA | Markdown |
+| openapi | STABLE | OpenAPI JSON |
+| openapi-yaml | STABLE | OpenAPI YAML |
+| plantuml | BETA | PlantUML |
+
+---
+
+## Schema generators
+
+| Generator | Stability | Output format |
+|-----------|-----------|---------------|
+| avro-schema | BETA | Apache Avro |
+| graphql-schema | STABLE | GraphQL SDL |
+| ktorm-schema | BETA | KTorm DSL |
+| mysql-schema | STABLE | MySQL DDL |
+| postgresql-schema | BETA | PostgreSQL DDL |
+| postman-collection | BETA | Postman Collection v2 |
+| protobuf-schema | BETA | Protocol Buffers |
+| wsdl-schema | BETA | WSDL |
+
+---
+
+## Config generators
+
+| Generator | Stability | Output |
+|-----------|-----------|--------|
+| apache2 | STABLE | Apache 2 virtual-host config |

@@ -1,24 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "OpenAPI Generator",
+  "projectType": "cli-tool",
+  "projectName": "OpenAPI Generator",
+  "projectDescription": "A tool that automatically generates API client libraries, server stubs, documentation, and configuration from an OpenAPI Specification (v2 and v3).",
   "theme": "luma",
-  "colors": {
-    "primary": "#9ec254",
-    "light": "#403f40",
-    "dark": "#f1f3e7"
-  },
-  "favicon": "https://media.brand.dev/cf945c86-c4df-46e3-9766-9d2d02847b5d.svg",
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/OpenAPITools/openapi-generator"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/OpenAPITools/openapi-generator"
-    }
-  },
+  "primaryColor": "#9ec254",
+  "lightColor": "#403f40",
+  "darkColor": "#f1f3e7",
   "navigation": {
     "tabs": [
       {
@@ -105,5 +92,28 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Generates API client libraries (SDKs) in 50+ languages and frameworks from an OpenAPI Specification",
+    "Generates server stubs for many popular frameworks (Spring, FastAPI, Go, Node.js, etc.)",
+    "Generates API documentation in HTML, Markdown, AsciiDoc, and more",
+    "Supports OpenAPI Specification v2 (Swagger) and v3",
+    "Highly customizable via Mustache templates and custom generators",
+    "Available via CLI (npm, Homebrew, pip, Docker, JAR), Maven plugin, Gradle plugin, and online API",
+    "Supports batch generation and CI/CD workflow integration",
+    "Extensible plugin system for custom template engines and generators"
+  ],
+  "publicApiSurface": [
+    "openapi-generator-cli generate -i <spec> -g <generator> -o <output>",
+    "openapi-generator-cli list",
+    "openapi-generator-cli validate -i <spec>",
+    "openapi-generator-cli config-help -g <generator>",
+    "openapi-generator-cli batch <config-file>",
+    "openapi-generator-cli meta",
+    "openapi-generator-cli author",
+    "openapi-generator-cli version",
+    "Maven Plugin: openapi-generator-maven-plugin (goal: generate)",
+    "Gradle Plugin: openApiGenerate task",
+    "Online REST API: POST /api/gen/clients/{language}, POST /api/gen/servers/{framework}"
+  ]
 }

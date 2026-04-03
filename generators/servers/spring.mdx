@@ -1,0 +1,206 @@
+---
+title: Spring server generator
+description: Generate a Java Spring Boot server stub from an OpenAPI specification using the spring generator.
+---
+
+The `spring` generator produces a Java Spring Boot server application with full SpringDoc integration. It is a **STABLE** server generator that emits annotated controller interfaces and model classes you fill in with business logic.
+
+## Quick start
+
+<Steps>
+  <Step title="Install the CLI">
+    Download the OpenAPI Generator CLI JAR or use the npm wrapper:
+
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate the server stub">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g spring \
+      -o ./my-spring-server \
+      --additional-properties=useSpringBoot3=true,basePackage=com.example
+    ```
+  </Step>
+  <Step title="Build and run">
+    ```bash
+    cd my-spring-server
+    mvn spring-boot:run
+    ```
+  </Step>
+  <Step title="Add your business logic">
+    Open the generated `*ApiDelegate` or `*ApiController` files and replace the stub implementations with your real logic.
+  </Step>
+</Steps>
+
+## Library options
+
+The `library` property selects the Spring sub-framework to target. Pass it with `--additional-properties`.
+
+<AccordionGroup>
+  <Accordion title="spring-boot (default)">
+    Generates a complete Spring Boot application with an embedded web server. Includes `pom.xml`, application properties, and a runnable `main` class.
+
+    ```bash
+    openapi-generator-cli generate -g spring \
+      --additional-properties=library=spring-boot
+    ```
+  </Accordion>
+  <Accordion title="spring-cloud">
+    Generates a Spring Cloud Feign client with Spring Boot auto-configured settings. Useful when the generated code is consumed as a client library by other services rather than deployed as a standalone server.
+
+    ```bash
+    openapi-generator-cli generate -g spring \
+      --additional-properties=library=spring-cloud
+    ```
+  </Accordion>
+  <Accordion title="spring-http-interface">
+    Generates Spring 6 HTTP interface declarations. Requires Spring Boot 3 or 4.
+
+    ```bash
+    openapi-generator-cli generate -g spring \
+      --additional-properties=library=spring-http-interface,useSpringBoot3=true
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Generated project structure
+
+```
+my-spring-server/
+├── pom.xml
+└── src/
+    └── main/
+        ├── java/
+        │   └── org/openapitools/
+        │       ├── OpenApiGeneratorApplication.java   # main class
+        │       ├── api/
+        │       │   ├── PetApi.java                    # generated interface
+        │       │   └── PetApiController.java           # stub controller
+        │       ├── model/
+        │       │   └── Pet.java                       # model class
+        │       └── configuration/
+        │           └── SpringDocConfiguration.java
+        └── resources/
+            └── application.properties
+```
+
+## Interface-only mode
+
+Set `interfaceOnly=true` to generate only the API interface without controller or service files. This is useful when you want to implement the API in your own existing project.
+
+```bash
+openapi-generator-cli generate -g spring \
+  --additional-properties=interfaceOnly=true
+```
+
+The generator emits a single `PetApi.java` interface annotated with `@RequestMapping`. Your own class implements it:
+
+```java
+@RestController
+public class PetApiImpl implements PetApi {
+    @Override
+    public ResponseEntity<Pet> getPetById(Long petId) {
+        // your business logic here
+        return ResponseEntity.ok(petService.findById(petId));
+    }
+}
+```
+
+## Delegate pattern
+
+Enable `delegatePattern=true` to generate a delegate interface alongside the controller. The controller delegates every call to the delegate, keeping generated and hand-written code separate.
+
+```bash
+openapi-generator-cli generate -g spring \
+  --additional-properties=delegatePattern=true
+```
+
+## Reactive support
+
+Use `reactive=true` to wrap return types in Project Reactor `Mono` / `Flux` types. Only available with the `spring-boot` library.
+
+```bash
+openapi-generator-cli generate -g spring \
+  --additional-properties=reactive=true
+```
+
+<Note>
+  `reactive=true` also sets `includeHttpRequestContext` to `true` by default and changes the base class to a reactive variant. Ensure your project includes the `spring-boot-starter-webflux` dependency.
+</Note>
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `library` | string | `spring-boot` | Sub-template: `spring-boot`, `spring-cloud`, `spring-http-interface` |
+| `useSpringBoot3` | boolean | `true` | Target Spring Boot 3+ (uses `jakarta.*` instead of `javax.*`) |
+| `useSpringBoot4` | boolean | `false` | Target Spring Boot 4.x |
+| `basePackage` | string | `org.openapitools` | Root package for generated code |
+| `apiPackage` | string | `org.openapitools.api` | Package for API interfaces and controllers |
+| `modelPackage` | string | `org.openapitools.model` | Package for model classes |
+| `configPackage` | string | `org.openapitools.configuration` | Package for configuration classes |
+| `interfaceOnly` | boolean | `false` | Generate only API interface stubs |
+| `delegatePattern` | boolean | `false` | Generate delegate interfaces for controllers |
+| `reactive` | boolean | `false` | Wrap responses in `Mono`/`Flux` (spring-boot only) |
+| `useBeanValidation` | boolean | `true` | Add Bean Validation annotations to models |
+| `useOptional` | boolean | `false` | Use `Optional<T>` for optional parameters |
+| `documentationProvider` | string | `springdoc` | OpenAPI documentation provider (`none`, `source`, `springdoc`) |
+| `annotationLibrary` | string | `swagger2` | Complementary annotation library (`none`, `swagger1`, `swagger2`) |
+| `dateLibrary` | string | `java8` | Date library (`joda`, `legacy`, `java8-localdatetime`, `java8`) |
+| `artifactId` | string | `openapi-spring` | Maven artifact ID |
+| `groupId` | string | `org.openapitools` | Maven group ID |
+| `artifactVersion` | string | `1.0.0` | Maven artifact version |
+| `async` | boolean | `false` | Use async `Callable` controllers |
+| `hateoas` | boolean | `false` | Use Spring HATEOAS library |
+| `useSwaggerUI` | boolean | `true` | Expose Swagger UI at `/swagger-ui.html` |
+| `useJakartaEe` | boolean | `false` | Use `jakarta.*` namespace instead of `javax.*` |
+| `skipDefaultInterface` | boolean | `false` | Skip default method implementations in Java 8 interfaces |
+| `additionalModelTypeAnnotations` | string | `null` | Semicolon-separated extra annotations for model classes |
+| `generateBuilders` | boolean | `false` | Generate builder methods on model classes |
+| `serializableModel` | boolean | `false` | Implement `Serializable` on model classes |
+
+## Vendor extensions
+
+The `spring` generator supports several `x-` extensions in your OpenAPI spec to control generated code:
+
+| Extension | Applicable to | Description |
+|-----------|--------------|-------------|
+| `x-implements` | MODEL | Interfaces the model class must implement |
+| `x-spring-paginated` | OPERATION | Adds `Pageable` parameter; removes `page`/`size`/`sort` query params |
+| `x-tags` | OPERATION | Assign multiple Swagger tags to an operation |
+| `x-class-extra-annotation` | MODEL | Extra class-level annotations |
+| `x-field-extra-annotation` | FIELD, OPERATION_PARAMETER | Extra field-level annotations |
+| `x-operation-extra-annotation` | OPERATION | Extra operation-level annotations |
+| `x-pattern-message` | FIELD, OPERATION_PARAMETER | Custom validation message for regex patterns |
+| `x-discriminator-value` | MODEL | Discriminator value for inheritance |
+
+## Example with configuration file
+
+You can store generation options in a `config.yaml` to avoid long CLI flags:
+
+```yaml
+generatorName: spring
+inputSpec: openapi.yaml
+outputDir: ./server
+
+additionalProperties:
+  useSpringBoot3: true
+  library: spring-boot
+  basePackage: com.example.api
+  apiPackage: com.example.api.controllers
+  modelPackage: com.example.api.models
+  delegatePattern: true
+  useBeanValidation: true
+  useSwaggerUI: true
+  artifactId: my-api-server
+  groupId: com.example
+```
+
+Run it with:
+
+```bash
+openapi-generator-cli generate -c config.yaml
+```

@@ -1,0 +1,257 @@
+---
+title: "Installation"
+description: "Install the OpenAPI Generator CLI using npm, Homebrew, Scoop, pip, Docker, JAR, or the Bash launcher script."
+---
+
+There are several ways to install OpenAPI Generator. This page covers each method for the CLI tool, which lets you run any available generator from the command line.
+
+<Info>
+  All installation methods expose the same generator options. Choose whichever method fits your operating system and workflow best.
+</Info>
+
+## npm
+
+<Note>
+  **Platform**: Linux, macOS, Windows
+</Note>
+
+The [npm package](https://github.com/openapitools/openapi-generator-cli) is a cross-platform wrapper around the JAR artifact. It normalizes CLI usage across operating systems and is the recommended installation method for most users.
+
+<Steps>
+  <Step title="Install globally">
+    Install the latest version of the CLI globally so the `openapi-generator-cli` command is available everywhere:
+
+    ```bash
+    npm install @openapitools/openapi-generator-cli -g
+    ```
+  </Step>
+  <Step title="(Optional) Pin a specific version">
+    To pin to a specific release, use the version manager after installation:
+
+    ```bash
+    openapi-generator-cli version-manager set 7.19.0
+    ```
+  </Step>
+  <Step title="Generate code">
+    Generate a Ruby client from the Petstore example spec:
+
+    ```bash
+    npx @openapitools/openapi-generator-cli generate \
+      -i petstore.yaml \
+      -g ruby \
+      -o /tmp/test/
+    ```
+
+    <Tip>
+      `npx` will use the globally installed `openapi-generator-cli` and fall back to a project-local installation if not found globally.
+    </Tip>
+  </Step>
+</Steps>
+
+To install as a dev dependency in your current project instead of globally:
+
+```bash
+npm install @openapitools/openapi-generator-cli -D
+```
+
+## Homebrew
+
+<Note>
+  **Platform**: macOS
+</Note>
+
+<Steps>
+  <Step title="Install via Homebrew">
+    ```bash
+    brew install openapi-generator
+    ```
+  </Step>
+  <Step title="Generate code">
+    ```bash
+    openapi-generator generate \
+      -i petstore.yaml \
+      -g ruby \
+      -o /tmp/test/
+    ```
+  </Step>
+</Steps>
+
+To reinstall with the latest development build:
+
+```bash
+brew uninstall openapi-generator && brew install --HEAD openapi-generator
+```
+
+## Scoop
+
+<Note>
+  **Platform**: Windows
+</Note>
+
+<Steps>
+  <Step title="Install via Scoop">
+    ```
+    scoop install openapi-generator-cli
+    ```
+  </Step>
+  <Step title="(Optional) Install Java via Scoop">
+    If Java is not already installed, you can install it from the Scoop Java bucket:
+
+    ```
+    scoop bucket add java
+    scoop install openjdk
+    ```
+  </Step>
+  <Step title="Generate code">
+    ```
+    openapi-generator-cli generate -i petstore.yaml -g ruby
+    ```
+  </Step>
+</Steps>
+
+## PyPI
+
+<Note>
+  **Platform**: Linux, macOS, Windows
+</Note>
+
+Install via pip. A `java` executable must be available on your `PATH` to run the generator.
+
+```bash
+pip install openapi-generator-cli
+```
+
+If you prefer not to install a system Java runtime, you can use the `jdk4py` extra (requires Python 3.10 or later):
+
+```bash
+pip install openapi-generator-cli[jdk4py]
+```
+
+## Docker
+
+<Note>
+  **Platform**: Linux, macOS, Windows
+</Note>
+
+The official Docker image acts as a standalone executable and requires no local Java installation.
+
+<Steps>
+  <Step title="Pull the image">
+    ```bash
+    docker pull openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate code">
+    Mount your working directory as a volume so the container can read your spec and write output:
+
+    ```bash
+    docker run --rm \
+      -v ${PWD}:/local openapitools/openapi-generator-cli generate \
+      -i /local/petstore.yaml \
+      -g go \
+      -o /local/out/go
+    ```
+
+    Generated files will appear in `./out/go` in your current directory.
+  </Step>
+</Steps>
+
+<Tip>
+  The Docker image is ideal for CI/CD pipelines where you want reproducible generation without managing a Java runtime.
+</Tip>
+
+## JAR (direct download)
+
+<Note>
+  **Platform**: Linux, macOS, Windows — requires Java 11 or later
+</Note>
+
+Download the JAR directly from Maven Central and run it with `java -jar`.
+
+<CodeGroup>
+
+```bash Mac / Linux
+wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.19.0/openapi-generator-cli-7.19.0.jar \
+  -O openapi-generator-cli.jar
+```
+
+```powershell Windows (PowerShell)
+Invoke-WebRequest `
+  -OutFile openapi-generator-cli.jar `
+  https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/7.19.0/openapi-generator-cli-7.19.0.jar
+```
+
+</CodeGroup>
+
+After downloading, verify the JAR works:
+
+```bash
+java -jar openapi-generator-cli.jar help
+```
+
+For Mac users, make sure Java 11 is active and export `JAVA_HOME`:
+
+```bash
+export JAVA_HOME=`/usr/libexec/java_home -v 1.11`
+export PATH=${JAVA_HOME}/bin:$PATH
+```
+
+## Bash launcher script
+
+<Note>
+  **Platform**: Linux, macOS (Windows with a Bash environment)
+</Note>
+
+The Bash launcher script automatically downloads and runs the latest released JAR, keeping you up to date without manual downloads.
+
+<Warning>
+  Always review scripts downloaded from external sources before executing them.
+</Warning>
+
+<Steps>
+  <Step title="Download and install the script">
+    ```bash
+    mkdir -p ~/bin/openapitools
+    curl https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/bin/utils/openapi-generator-cli.sh \
+      > ~/bin/openapitools/openapi-generator-cli
+    chmod u+x ~/bin/openapitools/openapi-generator-cli
+    export PATH=$PATH:~/bin/openapitools/
+    ```
+  </Step>
+  <Step title="Verify the installation">
+    ```bash
+    openapi-generator-cli version
+    ```
+
+    On first run, the script fetches the latest release from GitHub and caches the JAR locally. Subsequent invocations reuse the cached JAR unless a newer version is found.
+  </Step>
+</Steps>
+
+### Pinning a version with the launcher script
+
+You can control which version the launcher script uses via the `OPENAPI_GENERATOR_VERSION` environment variable:
+
+```bash
+# Use a specific version for a single invocation
+OPENAPI_GENERATOR_VERSION=3.1.0 openapi-generator-cli version
+
+# Use a specific version for the entire shell session
+export OPENAPI_GENERATOR_VERSION=3.0.2
+openapi-generator-cli version  # always 3.0.2
+
+# Persist a version across sessions
+echo "export OPENAPI_GENERATOR_VERSION=3.0.2" >> ~/.bashrc
+source ~/.bashrc
+```
+
+## Choosing an installation method
+
+| Method | Best for |
+| ------ | -------- |
+| **npm** | JavaScript/Node.js projects, cross-platform teams |
+| **Homebrew** | macOS developers who prefer managed packages |
+| **Scoop** | Windows developers who prefer managed packages |
+| **PyPI** | Python projects or environments without Node.js |
+| **Docker** | CI/CD pipelines, reproducible builds, no Java required |
+| **JAR** | Maximum control over the exact version used |
+| **Bash launcher** | Always-latest JAR on Linux/macOS without npm |

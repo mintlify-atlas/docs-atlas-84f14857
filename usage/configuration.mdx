@@ -1,0 +1,266 @@
+---
+title: Configuration
+description: How to configure OpenAPI Generator using global properties, config options, additional properties, and external config files.
+---
+
+OpenAPI Generator supports several distinct layers of configuration. Understanding which layer to use and how each tool exposes it will help you avoid common pitfalls.
+
+## Types of configuration
+
+<AccordionGroup>
+  <Accordion title="Global properties" defaultOpen>
+    Properties with cross-cutting concerns that control generation behavior but do not belong to any individual generator.
+
+    Example: `debugSupportingFiles` prints the template data bound to supporting files during generation.
+
+    See [Global properties](/usage/global-properties) for a full reference.
+  </Accordion>
+
+  <Accordion title="Config options">
+    Configuration specific to each individual generator. Options of the same name across different generators may be validated differently by each.
+
+    <Note>
+      The CLI accepts config options as **additional properties** (via `--additional-properties`). In Maven and Gradle plugins, the same values are typically placed inside a `<configOptions>` block or `configOptions.set(...)` call.
+    </Note>
+
+    Discover available config options for any generator using the `config-help` command:
+
+    ```bash
+    openapi-generator-cli config-help -g <generator-name>
+    ```
+  </Accordion>
+
+  <Accordion title="Additional properties">
+    Free-form properties passed directly to templates. These are typically used to:
+
+    - Supply user-defined values to custom templates (e.g. a `generatedBy` key)
+    - Pass config options from the CLI (which does not have a separate config options flag)
+
+    Generators will read, modify, and rewrite config options, while additional properties are passed through without transformation.
+  </Accordion>
+
+  <Accordion title="Top-level tool options">
+    Options specific to the tool bootstrapping generation (CLI flags, Maven plugin `<configuration>` block, Gradle extension DSL). These may duplicate or overlap with config options and global properties due to tooling conventions, framework limitations, or legacy compatibility.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Tool-specific declarations
+
+The same conceptual option may be declared differently depending on which tool you use. These differences arise from:
+
+- Conventions in the underlying build tooling
+- Limitations in frameworks that define how properties must be declared
+- Legacy invocation patterns maintained for compatibility
+
+### Example: `skip-validate-spec`
+
+<CodeGroup>
+
+```bash CLI
+# CLI uses a flag; can only be set to true (the flag's presence)
+openapi-generator-cli generate --skip-validate-spec ...
+```
+
+```xml Maven
+<!-- Maven allows an explicit true/false value -->
+<configuration>
+  <skipValidateSpec>true</skipValidateSpec>
+</configuration>
+```
+
+```groovy Gradle
+// Gradle also allows true/false
+openApiGenerate {
+    skipValidateSpec.set(true)
+}
+```
+
+</CodeGroup>
+
+### Example: selective generation with `apis`
+
+Global properties like `apis` can hold either an empty value (meaning "all") or a comma-separated selection list. Each tool expresses this differently.
+
+<CodeGroup>
+
+```bash CLI
+# Empty value = generate all apis
+openapi-generator-cli generate --global-property apis ...
+
+# Specific apis only
+openapi-generator-cli generate --global-property apis=Equipment ...
+```
+
+```groovy Gradle
+openApiGenerate {
+    globalProperties.set([
+        apis: "",
+        models: "User:Pet"
+    ])
+}
+```
+
+```xml Maven
+<!--
+  XML cannot distinguish between <apis/> and an absent <apis> node.
+  Maven plugin uses separate boolean + list properties instead:
+    generateApis (boolean) — generate all or none
+    apisToGenerate (string) — comma-separated selection list
+-->
+<configuration>
+  <generateApis>true</generateApis>
+  <apisToGenerate>Equipment</apisToGenerate>
+</configuration>
+```
+
+</CodeGroup>
+
+---
+
+## Discovering options
+
+### Config options (per generator)
+
+Use `config-help` to list all options for a specific generator:
+
+```bash
+openapi-generator-cli config-help -g mysql-schema
+```
+
+```text
+CONFIG OPTIONS
+
+	defaultDatabaseName
+	    Default database name for all MySQL queries (Default: )
+
+	identifierNamingConvention
+	    Naming convention of MySQL identifiers (table names and column names).
+	    (Default: original)
+	        original - Do not transform original names
+	        snake_case - Use snake_case names
+
+	jsonDataTypeEnabled
+	    Use special JSON MySQL data type for complex model properties.
+	    Requires MySQL version 5.7.8. (Default: true)
+
+	namedParametersEnabled
+	    Generates model prepared SQLs with named parameters, e.g. :petName.
+	    Question mark placeholder used when disabled. (Default: false)
+```
+
+Options shown with an indented list of values (like `identifierNamingConvention`) are constrained to those listed values.
+
+Config options are also documented online in the [Generators reference](/generators).
+
+### Global properties
+
+See the [Global properties](/usage/global-properties) reference for the complete list.
+
+### Tool options
+
+Top-level CLI flags are documented in the [CLI reference](/usage/cli). Many map directly to camelCase options in the Maven and Gradle plugins; refer to the respective plugin documentation for differences.
+
+---
+
+## Applying config options
+
+Once you know the option name, pass it using the mechanism appropriate to your tool.
+
+**Example:** apply `snake_case` identifier naming to `mysql-schema` output.
+
+<CodeGroup>
+
+```bash CLI
+openapi-generator-cli generate \
+    -g mysql-schema \
+    -o out/ \
+    -i spec.yaml \
+    --additional-properties=identifierNamingConvention=snake_case,useSingleRequestParameter=true,withInterfaces=true
+```
+
+```xml Maven
+<execution>
+  <id>mysql-schema</id>
+  <phase>generate-sources</phase>
+  <goals>
+    <goal>generate</goal>
+  </goals>
+  <configuration>
+    <inputSpec>spec.yaml</inputSpec>
+    <generatorName>mysql-schema</generatorName>
+    <configOptions>
+      <identifierNamingConvention>snake_case</identifierNamingConvention>
+    </configOptions>
+    <output>${project.build.directory}/generated-sources/mysql</output>
+  </configuration>
+</execution>
+```
+
+```groovy Gradle
+openApiGenerate {
+    generatorName.set("mysql-schema")
+    inputSpec.set("$rootDir/spec.yaml")
+    outputDir.set("$buildDir/mysql")
+    configOptions.set([
+        identifierNamingConvention: "snake_case"
+    ])
+}
+```
+
+</CodeGroup>
+
+<Warning>
+  In the CLI example there are two `=` signs: one after `--additional-properties` and one inside each `key=value` pair. This is intentional.
+</Warning>
+
+---
+
+## External config files
+
+Rather than passing all generator options as CLI flags, you can store them in a JSON or YAML file and reference it with `-c/--config`.
+
+### JSON format
+
+```json config.json
+{
+  "npmName": "@swagger/typescript-fetch-petstore",
+  "npmVersion": "1.0.0",
+  "npmRepository": "https://skimdb.npmjs.com/registry",
+  "snapshot": false,
+  "supportsES6": true
+}
+```
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g typescript-fetch \
+    -o out/ \
+    -c config.json
+```
+
+### YAML format
+
+The same configuration in YAML (file extension must be `.yml` or `.yaml`):
+
+```yaml config.yaml
+npmName: "@swagger/typescript-fetch-petstore"
+npmVersion: "1.0.0"
+npmRepository: "https://skimdb.npmjs.com/registry"
+snapshot: false
+supportsES6: true
+```
+
+```bash
+openapi-generator-cli generate \
+    -i petstore.yaml \
+    -g typescript-fetch \
+    -o out/ \
+    -c config.yaml
+```
+
+<Tip>
+  Use `config-help -g <generator> --format yamlsample` to generate a sample YAML config file pre-populated with all available options and their defaults.
+</Tip>

@@ -1,0 +1,282 @@
+---
+title: Schema and config generators
+description: Generate GraphQL schemas, MySQL DDL, Protocol Buffers, Postman collections, and normalized OpenAPI output from an OpenAPI specification.
+---
+
+OpenAPI Generator includes generators that convert an OpenAPI specification into other schema or configuration formats. These are primarily `SCHEMA` type generators and are useful for database provisioning, API testing, and cross-protocol compatibility.
+
+## Overview
+
+| Generator | Output | Stability | Notes |
+|-----------|--------|-----------|-------|
+| `graphql-schema` | GraphQL schema (`.graphql`) | STABLE | Converts REST models to GraphQL types |
+| `mysql-schema` | MySQL DDL (`.sql`) | STABLE | Creates `CREATE TABLE` statements from models |
+| `protobuf-schema` | Protocol Buffers v3 (`.proto`) | BETA | gRPC and Protobuf schema generation |
+| `postman-collection` | Postman Collection v2.1 JSON | BETA | Ready-to-import Postman collection |
+| `openapi-yaml` | Normalized OpenAPI YAML | STABLE | Resolves `$ref`s and normalizes the spec |
+| `openapi` | Normalized OpenAPI JSON | STABLE | Same as `openapi-yaml` but in JSON format |
+| `ktorm-schema` | Kotlin Ktorm ORM schema | BETA | Generates Kotlin Ktorm entity definitions |
+
+---
+
+## graphql-schema
+
+Converts OpenAPI model schemas into a GraphQL schema definition language (SDL) file. Each OpenAPI schema becomes a GraphQL `type`, and enum schemas become GraphQL `enum` values.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g graphql-schema \
+  -o ./graphql
+```
+
+Output: one or more `.graphql` files in the output directory.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `packageName` | string | `openapi2graphql` | GraphQL package name (lowercase) |
+| `packageVersion` | string | `1.0.0` | Package version |
+| `hideGenerationTimestamp` | boolean | `true` | Suppress generation timestamp in output |
+
+### Example output
+
+Given an OpenAPI `Pet` schema:
+
+```yaml
+Pet:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: integer
+      format: int64
+    name:
+      type: string
+    tag:
+      type: string
+```
+
+The generator produces:
+
+```graphql
+type Pet {
+  id: Int!
+  name: String!
+  tag: String
+}
+```
+
+<Note>
+  The `graphql-schema` generator does not support schema polymorphism (`oneOf`, `anyOf`, `allOf`) or security scheme mapping. It converts data model shapes only.
+</Note>
+
+---
+
+## mysql-schema
+
+Generates MySQL DDL (`CREATE TABLE` statements) from OpenAPI model schemas. Each schema becomes a table with columns derived from its properties.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g mysql-schema \
+  -o ./sql
+```
+
+Output: one or more `.sql` files containing `CREATE TABLE` statements.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultDatabaseName` | string | _(empty)_ | Default database name added to generated SQL queries |
+| `identifierNamingConvention` | string | `original` | Table and column naming: `original` or `snake_case` |
+| `jsonDataTypeEnabled` | boolean | `true` | Use MySQL `JSON` type for complex properties (requires MySQL 5.7.8+); falls back to `TEXT` when disabled |
+| `namedParametersEnabled` | boolean | `false` | Use named parameters (`:petName`) in prepared statements instead of `?` placeholders |
+
+### Example
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g mysql-schema \
+  -o ./sql \
+  --additional-properties=identifierNamingConvention=snake_case,defaultDatabaseName=mydb
+```
+
+Example output:
+
+```sql
+CREATE TABLE `pet` (
+  `id` BIGINT NOT NULL,
+  `name` TEXT NOT NULL,
+  `tag` TEXT,
+  PRIMARY KEY (`id`)
+);
+```
+
+<Tip>
+  Set `jsonDataTypeEnabled=false` if you are targeting MySQL versions older than 5.7.8 or databases that do not support the native JSON column type.
+</Tip>
+
+---
+
+## protobuf-schema
+
+Generates Protocol Buffers v3 (`.proto`) schema files and optionally gRPC service definitions. This generator is in **BETA**.
+
+<Warning>
+  The `protobuf-schema` generator is in BETA. Output format may change between releases.
+</Warning>
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g protobuf-schema \
+  -o ./proto
+```
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `addJsonNameAnnotation` | boolean | `false` | Add `json_name` annotation when the field name differs from the spec name |
+| `aggregateModelsName` | string | `null` | If set, combine all models into a single `.proto` file with this name |
+| `extractEnumsToSeparateFiles` | boolean | `false` | Extract enum definitions to their own `.proto` files |
+| `numberedFieldNumberList` | boolean | `false` | Assign field numbers sequentially |
+| `startEnumsWithUnspecified` | boolean | `false` | Prepend `FIELD_UNSPECIFIED = 0` to every enum |
+| `supportMultipleResponses` | boolean | `true` | Generate wrapper messages for operations with multiple response types |
+| `useSimplifiedEnumNames` | boolean | `false` | Use simplified (shorter) names for enum values |
+| `wrapComplexType` | boolean | `true` | Wrap complex property types in a dedicated message |
+| `customOptionsApi` | string | `null` | Custom options to include in generated API (service) files |
+| `customOptionsModel` | string | `null` | Custom options to include in generated model files |
+
+### Example output
+
+```protobuf
+syntax = "proto3";
+
+package openapi2proto;
+
+message Pet {
+  int64 id = 1;
+  string name = 2;
+  string tag = 3;
+}
+
+service PetService {
+  rpc GetPetById (GetPetByIdRequest) returns (Pet);
+  rpc AddPet (Pet) returns (Pet);
+}
+```
+
+---
+
+## postman-collection
+
+Generates a Postman Collection v2.1.0 JSON file that can be imported directly into [Postman](https://www.postman.com/). The collection includes all requests defined in the spec, organised into folders.
+
+<Note>
+  The `postman-collection` generator is in BETA.
+</Note>
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g postman-collection \
+  -o ./postman
+```
+
+Output: a single `postman_collection.json` file.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `folderStrategy` | string | `null` | Organise requests into folders by `paths` or `tags` |
+| `pathParamsAsVariables` | boolean | `false` | Create Postman collection variables for path parameters |
+| `postmanGuid` | boolean/string | `null` | Replace a placeholder (e.g., `{{UNIQUE_REFERENCE}}`) with Postman's `{{$guid}}` formula |
+| `postmanGuidPlaceholderName` | string | `null` | Name of the placeholder to replace with `{{$guid}}` |
+| `postmanIsoTimestamp` | boolean/string | `null` | Replace a placeholder with Postman's `{{$isoTimestamp}}` formula |
+| `postmanIsoTimestampPlaceholderName` | string | `null` | Name of the placeholder to replace with `{{$isoTimestamp}}` |
+| `postmanVariables` | boolean/string | `null` | Convert `{{VAR_1}}` placeholders to Postman variables |
+| `requestParameterGeneration` | string | `null` | Generate request parameters from `schema` or from `examples` |
+
+### Example with folder strategy and variables
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g postman-collection \
+  -o ./postman \
+  --additional-properties=folderStrategy=tags,pathParamsAsVariables=true,requestParameterGeneration=schema
+```
+
+Import the resulting file in Postman via **File → Import**.
+
+---
+
+## openapi-yaml and openapi
+
+These generators normalize and resolve an OpenAPI specification, expanding `$ref` references and producing a clean canonical output. They are useful for:
+
+- Bundling a multi-file spec into a single file
+- Pre-processing before feeding into other tools
+- Validating and cleaning up a spec
+
+<CodeGroup>
+
+```bash yaml output
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g openapi-yaml \
+  -o ./normalized
+# Output: normalized/openapi.yaml
+```
+
+```bash json output
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g openapi \
+  -o ./normalized
+# Output: normalized/openapi.json
+```
+
+</CodeGroup>
+
+Neither generator has configuration options beyond common global settings.
+
+---
+
+## ktorm-schema
+
+Generates [Ktorm](https://www.ktorm.org/) ORM entity definitions for Kotlin. Each OpenAPI model schema becomes a Ktorm `Table` object with typed column definitions. This generator is in **BETA**.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g ktorm-schema \
+  -o ./ktorm
+```
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `primaryKey` | string | `id` | Property name to use as the primary key column |
+| `identifierNamingConvention` | string | `original` | Column naming convention: `original` or `snake_case` |
+| `addSurrogateKey` | boolean | `false` | Add an auto-increment surrogate key column if no primary key is present in the schema |
+
+### Example output
+
+```kotlin
+object Pets : Table<Nothing>("pet") {
+    val id = long("id").primaryKey()
+    val name = varchar("name")
+    val tag = varchar("tag")
+}
+```

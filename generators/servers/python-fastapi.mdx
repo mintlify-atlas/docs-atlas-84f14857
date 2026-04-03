@@ -1,0 +1,168 @@
+---
+title: Python FastAPI server generator
+description: Generate a Python FastAPI server stub with Pydantic models from an OpenAPI specification using the python-fastapi generator.
+---
+
+The `python-fastapi` generator produces a Python 3.10+ server skeleton based on [FastAPI](https://fastapi.tiangolo.com/). Models are defined using [Pydantic](https://docs.pydantic.dev/) and the generator is currently in **BETA**.
+
+<Warning>
+  The `python-fastapi` generator is in BETA. Its output may change between OpenAPI Generator releases. Pin to a specific version in production.
+</Warning>
+
+## Quick start
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate the server">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g python-fastapi \
+      -o ./my-fastapi-server
+    ```
+  </Step>
+  <Step title="Create a virtual environment and install dependencies">
+    ```bash
+    cd my-fastapi-server
+    python -m venv .venv
+    source .venv/bin/activate       # Windows: .venv\Scripts\activate
+    pip install -r requirements.txt
+    ```
+  </Step>
+  <Step title="Start the server">
+    ```bash
+    uvicorn src.openapi_server.main:app --reload --port 8080
+    ```
+
+    The interactive API docs are available at `http://localhost:8080/docs`.
+  </Step>
+  <Step title="Implement your handlers">
+    Edit the files under `src/impl/` to add real business logic.
+  </Step>
+</Steps>
+
+## Pydantic model generation
+
+Every schema in the OpenAPI spec becomes a Pydantic `BaseModel` subclass. Required fields are declared without a default value; optional fields use `Optional[T] = None`.
+
+```python
+# src/openapi_server/models/pet.py (generated)
+from pydantic import BaseModel
+from typing import Optional
+
+class Pet(BaseModel):
+    id: int
+    name: str
+    tag: Optional[str] = None
+```
+
+Pydantic automatically validates incoming request bodies against these models. If a request violates the schema, FastAPI returns a `422 Unprocessable Entity` response with field-level error details.
+
+## Generated project structure
+
+```
+my-fastapi-server/
+├── requirements.txt
+└── src/
+    ├── openapi_server/
+    │   ├── main.py                  # FastAPI app entry point
+    │   ├── apis/
+    │   │   └── pet_api.py           # generated router with endpoint stubs
+    │   └── models/
+    │       └── pet.py               # Pydantic model
+    └── impl/                        # implementation package (edit here)
+        └── pet_api_impl.py          # stub implementations
+```
+
+The `impl/` directory (controlled by `fastapiImplementationPackage`) is generated once and not overwritten on subsequent runs, making it safe to add your logic there.
+
+<Tip>
+  The `src/openapi_server/apis/` files are regenerated every time. Keep all custom code in `src/impl/`.
+</Tip>
+
+## How the generated server works
+
+Each API router in `apis/` imports the corresponding implementation class from `impl/` and delegates every endpoint to it. A generated stub looks like:
+
+```python
+# src/impl/pet_api_impl.py (stub — edit this file)
+from openapi_server.models.pet import Pet
+
+class PetApiImpl:
+    async def get_pet_by_id(self, pet_id: int) -> Pet:
+        raise NotImplementedError("Implement get_pet_by_id")
+```
+
+Replace `raise NotImplementedError(...)` with real logic:
+
+```python
+class PetApiImpl:
+    async def get_pet_by_id(self, pet_id: int) -> Pet:
+        pet = await self.db.get(pet_id)
+        if pet is None:
+            raise HTTPException(status_code=404, detail="Pet not found")
+        return pet
+```
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `packageName` | string | `openapi_server` | Python package name for generated server code (snake_case) |
+| `packageVersion` | string | `1.0.0` | Package version |
+| `fastapiImplementationPackage` | string | `impl` | Python package name for the implementation stubs |
+| `sourceFolder` | string | `src` | Root directory for generated Python source |
+| `serverPort` | integer | `8080` | TCP port the server binds to in `app.run` |
+| `sortModelPropertiesByRequiredFlag` | boolean | `true` | Place required fields before optional ones in models |
+| `sortParamsByRequiredFlag` | boolean | `true` | Place required parameters before optional ones in endpoints |
+| `ensureUniqueParams` | boolean | `true` | Rename duplicate parameter names within an operation |
+| `allowUnicodeIdentifiers` | boolean | `false` | Allow unicode characters in identifiers |
+
+Pass options via `--additional-properties`:
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g python-fastapi \
+  -o ./server \
+  --additional-properties=packageName=my_api,serverPort=3000,fastapiImplementationPackage=handlers
+```
+
+Or in a configuration file:
+
+```yaml
+generatorName: python-fastapi
+inputSpec: openapi.yaml
+outputDir: ./server
+
+additionalProperties:
+  packageName: my_api
+  packageVersion: 2.0.0
+  fastapiImplementationPackage: handlers
+  serverPort: 3000
+  sourceFolder: src
+```
+
+## Supported security schemes
+
+The `python-fastapi` generator supports the following security schemes from your spec:
+
+- HTTP Basic authentication
+- API key
+- Bearer token
+- OAuth2 Implicit, Password, and Authorization Code flows
+
+## Supported features
+
+- Path, query, header, body, form (url-encoded and multipart), and cookie parameters
+- Pydantic model validation for request bodies
+- JSON and XML wire formats
+- Polymorphic schemas (`Polymorphism`)
+
+<Note>
+  `oneOf`, `anyOf`, and `allOf` schema composition is not yet supported by this generator.
+</Note>

@@ -1,0 +1,302 @@
+---
+title: Gradle Plugin
+description: Generate API clients and server stubs from OpenAPI specs as part of your Gradle build using a declarative DSL.
+---
+
+The OpenAPI Generator Gradle plugin provides a declarative DSL that maps 1:1 with the CLI and Maven plugin options. It exposes named extensions and corresponding tasks so generation integrates naturally into any Gradle build.
+
+## Plugin Setup
+
+Add the plugin using the `plugins` block (recommended):
+
+```groovy
+plugins {
+  id "org.openapi.generator" version "7.19.0"
+}
+```
+
+Or using legacy plugin application:
+
+```groovy
+buildscript {
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+  dependencies {
+    classpath "org.openapitools:openapi-generator-gradle-plugin:7.19.0"
+  }
+}
+
+apply plugin: 'org.openapi.generator'
+```
+
+## Available Tasks
+
+The plugin registers the following tasks under the **OpenAPI Tools** group:
+
+| Task | Description |
+|---|---|
+| `openApiGenerate` | Generate code from an OpenAPI 2.0 or 3.x specification |
+| `openApiGenerators` | List all available generators |
+| `openApiMeta` | Scaffold a new custom generator |
+| `openApiValidate` | Validate an OpenAPI 2.0 or 3.x specification |
+
+<Note>
+  The plugin implements each task as a project extension of the same name. To use one of these tasks in a `dependsOn` declaration, reference it via `tasks.named("openApiGenerate")` (or `tasks.openApiGenerate`).
+</Note>
+
+## Basic Example
+
+Generate a Kotlin client from a Petstore spec:
+
+```groovy
+openApiGenerate {
+    generatorName.set("kotlin")
+    inputSpec.set("$rootDir/specs/petstore-v3.0.yaml")
+    outputDir.set(layout.buildDirectory.dir("generated").get().asFile.path)
+    apiPackage.set("org.openapi.example.api")
+    invokerPackage.set("org.openapi.example.invoker")
+    modelPackage.set("org.openapi.example.model")
+    configOptions.put("dateLibrary", "java8")
+}
+```
+
+Run code generation:
+
+```bash
+./gradlew openApiGenerate
+```
+
+Tie generation to compilation so it runs automatically:
+
+```groovy
+compileJava.dependsOn tasks.named("openApiGenerate")
+```
+
+## Configuration Options
+
+### Core Options
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `generatorName` | String | — | The generator to use (e.g. `java`, `kotlin`, `spring`) |
+| `inputSpec` | String | — | Path to the local OpenAPI spec file |
+| `remoteInputSpec` | String | — | URL of a remote OpenAPI spec |
+| `outputDir` | String | — | Directory where generated files are written |
+| `configFile` | String | — | Path to a JSON configuration file |
+| `verbose` | Boolean | `false` | Enable verbose output |
+| `validateSpec` | Boolean | `true` | Validate the spec before generating; errors abort the build |
+| `skipValidateSpec` | Boolean | `false` | Skip spec validation entirely |
+| `skipOverwrite` | Boolean | `false` | Preserve existing files instead of overwriting them |
+| `cleanupOutput` | Boolean | `false` | Delete the output directory before generating |
+| `dryRun` | Boolean | `false` | Print what would be generated without writing any files |
+| `engine` | String | `mustache` | Templating engine: `mustache` or `handlebars` (beta) |
+
+### Package Options
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `apiPackage` | String | generator default | Package for generated API classes |
+| `modelPackage` | String | generator default | Package for generated model classes |
+| `invokerPackage` | String | — | Root package for generated invoker/client code |
+| `packageName` | String | generator default | Default package for all generated classes |
+| `modelNamePrefix` | String | — | Prefix prepended to all model names |
+| `modelNameSuffix` | String | — | Suffix appended to all model names |
+| `apiNameSuffix` | String | — | Suffix appended to all API names |
+
+### Generation Control
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `globalProperties` | Map(String, String) | — | Global generation properties (replaces deprecated `environmentVariables`) |
+| `configOptions` | Map(String, String) | — | Generator-specific options |
+| `apiFilesConstrainedTo` | List(String) | — | Subset of API files to generate |
+| `modelFilesConstrainedTo` | List(String) | — | Subset of model files to generate |
+| `supportingFilesConstrainedTo` | List(String) | — | Subset of supporting files to generate |
+| `generateModelTests` | Boolean | `true` | Generate model test files |
+| `generateModelDocumentation` | Boolean | `true` | Generate model documentation files |
+| `generateApiTests` | Boolean | `true` | Generate API test files |
+| `generateApiDocumentation` | Boolean | `true` | Generate API documentation files |
+
+<Note>
+  Configuring any one of `apiFilesConstrainedTo`, `modelFilesConstrainedTo`, or `supportingFilesConstrainedTo` disables the others. For fine-grained control, use an ignore file via `ignoreFileOverride`.
+</Note>
+
+### Type Mappings
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `typeMappings` | Map(String, String) | — | OpenAPI type to generated type mappings |
+| `importMappings` | Map(String, String) | — | Class to import path mappings |
+| `instantiationTypes` | Map(String, String) | — | Type instantiation mappings (e.g. `array=ArrayList`) |
+| `schemaMappings` | Map(String, String) | — | Schema name to new name mappings |
+| `nameMappings` | Map(String, String) | — | Property name to new name mappings |
+| `modelNameMappings` | Map(String, String) | — | Model name to new name mappings |
+| `parameterNameMappings` | Map(String, String) | — | Parameter name to new name mappings |
+| `languageSpecificPrimitives` | List(String) | — | Additional language-specific primitive types |
+| `reservedWordsMappings` | Map(String, String) | — | Reserved word escape mappings |
+| `additionalProperties` | Map(String, Any) | — | Additional properties passed to Mustache templates |
+
+### Template Options
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `templateDir` | String | — | Path to a directory of custom Mustache templates |
+| `templateResourcePath` | String | — | Template directory via resource path (overrides `templateDir`) |
+| `ignoreFileOverride` | String | — | Override path for the `.openapi-generator-ignore` file |
+
+### Git and Artifact
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `gitHost` | String | `github.com` | Git host (e.g. `gitlab.com`) |
+| `gitUserId` | String | — | Git user ID |
+| `gitRepoId` | String | — | Git repository ID |
+| `groupId` | String | — | GroupId for generated build scripts |
+| `id` | String | — | ArtifactId for generated build scripts |
+| `version` | String | — | Artifact version for generated build scripts |
+| `library` | String | — | Sub-template library variant |
+
+## Selective Generation with `globalProperties`
+
+Disable specific parts of generation by passing `"false"`:
+
+```groovy
+openApiGenerate {
+    // other settings omitted
+    globalProperties.set([
+        modelDocs: "false",
+        apis: "false"
+    ])
+}
+```
+
+Generate only specific models by providing a colon-separated list, or an empty string to generate all:
+
+```groovy
+openApiGenerate {
+    // other settings omitted
+    globalProperties.set([
+        apis: "",
+        models: "User:Pet"
+    ])
+}
+```
+
+<Warning>
+  Passing `"true"` to a `globalProperties` entry is treated as a literal name, not a boolean. Use an empty string `""` to generate everything for a category.
+</Warning>
+
+## Multiple Spec Generation
+
+When you need to generate from more than one spec, or with different parameters, create named tasks of type `org.openapitools.generator.gradle.plugin.tasks.GenerateTask`:
+
+```groovy
+task buildGoClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName.set("go")
+    inputSpec.set("$rootDir/petstore-v3.0.yaml")
+    additionalProperties.set([
+        packageName: "petstore"
+    ])
+    outputDir.set(layout.buildDirectory.dir("go").get().asFile.path)
+    configOptions.set([
+        dateLibrary: "threetenp"
+    ])
+}
+
+task buildKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName.set("kotlin")
+    inputSpec.set("$rootDir/petstore-v3.0.yaml")
+    outputDir.set(layout.buildDirectory.dir("kotlin").get().asFile.path)
+    apiPackage.set("org.openapitools.example.api")
+    invokerPackage.set("org.openapitools.example.invoker")
+    modelPackage.set("org.openapitools.example.model")
+    configOptions.set([
+        dateLibrary: "java8"
+    ])
+    globalProperties.set([
+        modelDocs: "false"
+    ])
+}
+```
+
+Run them individually or together:
+
+```bash
+./gradlew buildGoClient buildKotlinClient
+```
+
+Group them under a single aggregate task:
+
+```groovy
+task codegen(dependsOn: ['buildGoClient', 'buildKotlinClient'])
+```
+
+Or tie generation to compilation:
+
+```groovy
+compileJava.dependsOn buildKotlinClient, tasks.openApiGenerate
+```
+
+## Caching and Up-To-Date Checks
+
+The plugin supports Gradle's incremental build (up-to-date checks) and build cache. Enable caching globally:
+
+```properties
+# gradle.properties
+org.gradle.caching=true
+```
+
+To disable up-to-date checks and caching for the default extension task:
+
+```groovy
+tasks.withType(org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+}
+```
+
+## Validating a Spec
+
+```groovy
+openApiValidate {
+    inputSpec.set("$rootDir/specs/petstore-v3.0.yaml")
+    recommend.set(true)
+}
+```
+
+```bash
+./gradlew openApiValidate
+```
+
+## Listing Available Generators
+
+```bash
+./gradlew openApiGenerators
+```
+
+## Android Studio Troubleshooting
+
+Android Studio on Windows may encounter a Guava dependency conflict with versions of the plugin greater than 3.0.0. Exclude the conflicting dependency as a workaround:
+
+```groovy
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.2.1'
+        classpath('org.openapitools:openapi-generator-gradle-plugin:7.19.0') {
+            exclude group: 'com.google.guava'
+        }
+    }
+}
+
+configurations {
+    compile.exclude module: 'guava-jdk5'
+}
+
+apply plugin: 'org.openapi.generator'
+```

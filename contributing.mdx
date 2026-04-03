@@ -1,0 +1,264 @@
+---
+title: "Contributing"
+description: "How to report bugs, request features, submit pull requests, and add new generators to OpenAPI Generator."
+---
+
+Thank you for your interest in contributing. OpenAPI Generator is community-driven, and contributions of all kinds are welcome — bug reports, feature requests, documentation improvements, and code changes.
+
+## Before submitting an issue
+
+<AccordionGroup>
+  <Accordion title="Check the latest master first">
+    If you are not using the latest master to generate API clients or server stubs, try pulling the latest master before filing an issue — it may have already been addressed.
+
+    ```bash
+    git pull origin master
+    ```
+
+    See [Getting Started](https://github.com/openapitools/openapi-generator#getting-started) for instructions.
+  </Accordion>
+
+  <Accordion title="Search existing issues">
+    Search both [open issues](https://github.com/openapitools/openapi-generator/issues) and [closed issues](https://github.com/openapitools/openapi-generator/issues?q=is%3Aissue+is%3Aclosed) to make sure no one else has reported something similar.
+  </Accordion>
+
+  <Accordion title="Build from source to confirm">
+    Test with the latest master by building the JAR locally to confirm whether the issue has already been addressed.
+
+    ```bash
+    ./mvnw clean install -DskipTests -Dmaven.javadoc.skip=true
+    java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar help
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Reporting bugs
+
+File an [issue ticket](https://github.com/openapitools/openapi-generator/issues/new) and include:
+
+- The version of OpenAPI Generator you are using.
+- The generator name (`-g` value).
+- Your OpenAPI spec (or a minimal reproducing example).
+- The full command you ran.
+- The error output or unexpected behavior.
+
+<Warning>
+  Failure to provide enough detail may result in slow response from the community.
+</Warning>
+
+You can also open an issue to make a suggestion or ask a question.
+
+## Reporting security vulnerabilities
+
+Do not file a public GitHub issue for security vulnerabilities. Instead, contact the team directly at [team@openapitools.org](mailto:team@openapitools.org) with the details, and the team will follow up with you.
+
+---
+
+## Before submitting a PR
+
+<AccordionGroup>
+  <Accordion title="Check for existing work">
+    Search [open issues](https://github.com/openapitools/openapi-generator/issues) to make sure no one else is actively working on a similar change.
+  </Accordion>
+
+  <Accordion title="Open a discussion first for significant changes">
+    If no one has suggested something similar, open an [issue](https://github.com/openapitools/openapi-generator/issues) to gather feedback from the community before investing significant time in an implementation.
+  </Accordion>
+
+  <Accordion title="Prefer templates over new generator options">
+    If you are adding a new option to a generator, consider using the `-t` option with customized templates instead, or start a discussion first by opening an issue. The project aims to avoid adding too many options to generators.
+  </Accordion>
+
+  <Accordion title="Use a dedicated branch">
+    Create a new git branch for your change so that the merge commit message looks clean in the commit history.
+
+    ```bash
+    git checkout -b fix_issue9999
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Submitting a pull request
+
+<Steps>
+  <Step title="Fork and clone the repository">
+    Visit [https://github.com/openapitools/openapi-generator](https://github.com/openapitools/openapi-generator) and click **Fork**. Then clone your fork:
+
+    ```bash
+    git clone https://github.com/your_user_id/openapi-generator.git
+    cd openapi-generator
+    ```
+  </Step>
+
+  <Step title="Create a branch">
+    ```bash
+    git checkout -b fix_issue9999
+    ```
+
+    File the pull request against the correct branch — use `master` for non-breaking changes. See the [Git Branches wiki page](https://github.com/OpenAPITools/openapi-generator/wiki/Git-Branches) for more information.
+  </Step>
+
+  <Step title="Make your changes">
+    Edit the relevant files. See the sections below for where to find code generators and templates.
+  </Step>
+
+  <Step title="Commit and push">
+    ```bash
+    git commit -a
+    git push origin fix_issue9999
+    ```
+
+    If you have added new files, use `git add filename` before committing.
+  </Step>
+
+  <Step title="Open the pull request">
+    Visit [https://github.com/openapitools/openapi-generator](https://github.com/openapitools/openapi-generator) and click the button to file a new PR based on your branch.
+
+    In the PR:
+    - Write a meaningful title and description.
+    - Use keywords like `fix`, `close`, or `resolve` followed by the issue number (e.g., `fix #1542`) to automatically close the issue when the PR is merged.
+    - Enable **Allow edits from maintainers** so maintainers can apply minor fixes if needed.
+  </Step>
+</Steps>
+
+---
+
+## Development setup
+
+### Building from source
+
+Build the `openapi-generator-cli` JAR without running tests:
+
+<Tabs>
+  <Tab title="Linux / macOS">
+    ```bash
+    ./mvnw clean install -DskipTests -Dmaven.javadoc.skip=true
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```bat
+    mvnw.cmd clean install -DskipTests -Dmaven.javadoc.skip=true
+    ```
+  </Tab>
+</Tabs>
+
+This generates the JAR at `modules/openapi-generator-cli/target/openapi-generator-cli.jar`. Run it with:
+
+```bash
+java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar help
+```
+
+### Testing
+
+To add unit test cases covering your code generator change, see the test directory at [`modules/openapi-generator/src/test/java/org/openapitools/codegen`](https://github.com/openapitools/openapi-generator/tree/master/modules/openapi-generator/src/test/java/org/openapitools/codegen).
+
+**Testing templates:**
+
+1. Update the Petstore sample by running the shell scripts under the `bin` folder:
+
+   ```bash
+   ./bin/generate-samples.sh ./bin/configs/python*
+   ```
+
+   On Windows, install [GIT Bash](https://gitforwindows.org/) first.
+
+2. During development, you can quickly regenerate samples without recompiling by passing the `-t` parameter:
+
+   ```bash
+   java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar generate \
+     -t modules/openapi-generator/src/main/resources/python \
+     ...
+   ```
+
+3. Run the integration tests in the sample folder:
+
+   ```bash
+   mvn integration-test -f samples/client/petstore/python/pom.xml
+   ```
+
+   <Note>
+     You must run a local instance of the Petstore server. See [Integration Tests](https://github.com/OpenAPITools/openapi-generator/wiki/Integration-Tests) for setup instructions.
+   </Note>
+
+4. Commit the updated sample files:
+
+   ```bash
+   git commit -a
+   ```
+
+**Running CI tests:**
+
+```bash
+mvn verify -Psamples
+```
+
+For new test cases, add them to the [Fake Petstore spec](https://github.com/OpenAPITools/openapi-generator/blob/master/modules/openapi-generator/src/test/resources/3_0/petstore-with-fake-endpoints-models-for-testing.yaml).
+
+---
+
+## Code structure
+
+### Code generators
+
+All code generators are in:
+
+```text
+modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/
+```
+
+To add a new generator, follow the [new-generator guide](https://openapi-generator.tech/docs/new-generator).
+
+### Templates
+
+All Mustache templates are in:
+
+```text
+modules/openapi-generator/src/main/resources/
+```
+
+For a list of available template variables, see the [Mustache Template Variables wiki page](https://github.com/openapitools/openapi-generator/wiki/Mustache-Template-Variables).
+
+---
+
+## Code style
+
+Changes must conform to the style guide of the respective language:
+
+| Language | Style guide |
+|----------|-------------|
+| Java | [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html) |
+| TypeScript | [TypeScript Coding Guidelines](https://github.com/Microsoft/TypeScript/wiki/Coding-guidelines) |
+| Python | [PEP 8](https://www.python.org/dev/peps/pep-0008/) |
+| Go | [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments) |
+| Kotlin | [Kotlin Coding Conventions](https://kotlinlang.org/docs/reference/coding-conventions.html) |
+| C# | [MSDN C# Coding Conventions](https://msdn.microsoft.com/en-us/library/vstudio/ff926074.aspx) |
+| C++ | [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) |
+| Ruby | [Ruby Style Guide](https://github.com/bbatsov/ruby-style-guide) |
+| Swift | [Apple Developer Documentation](https://developer.apple.com/library/prerelease/ios/documentation/Swift/Conceptual/Swift_Programming_Language/TheBasics.html) |
+| Rust | [rustfmt defaults](https://github.com/rust-lang-nursery/rustfmt) |
+| PHP | [PSR-12](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-12-extended-coding-style-guide.md) |
+| Scala | [Scala Style Guide](http://docs.scala-lang.org/style/) |
+
+For languages not listed here, feel free to suggest a style guide.
+
+### Vendor extensions
+
+For [Vendor Extensions](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#vendorExtensions), follow this naming convention:
+
+- **General extensions:** lowercase with hyphens. Example: `x-is-unique`, `x-content-type`
+- **Language-specific extensions:** `x-{lang}-{extension-name}`. Example: `x-objc-operation-id`, `x-java-feign-retry-limit`
+
+If you add new vendor extensions in your PR, update the [Vendor Extensions wiki page](https://github.com/openapitools/openapi-generator/wiki/Vendor-Extensions).
+
+---
+
+## PR tips
+
+- Smaller changes are easier to review.
+- For bug fixes, provide an OpenAPI spec that reproduces the issue so reviewers can confirm the fix.
+- Add test case(s) to cover the change.
+- Document the fix in the code to make it more readable.
+- Set `git config core.autocrlf input` to ensure Git converts CRLF to LF on commit.
+- Use `fix #<issue>`, `close #<issue>`, or `resolve #<issue>` in your PR description to automatically close the linked issue when merged.

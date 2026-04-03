@@ -1,0 +1,278 @@
+---
+title: TypeScript Client Generators
+description: Generate TypeScript client SDKs using Axios, Fetch, Angular, Node, NestJS, RxJS, and other TypeScript-first HTTP libraries.
+---
+
+OpenAPI Generator provides multiple TypeScript generators, each targeting a different runtime or framework. Choose the one that fits your project's dependency stack.
+
+## Generator comparison
+
+| Generator | Stability | Best for |
+|-----------|-----------|----------|
+| `typescript-axios` | STABLE | Browser and Node apps already using Axios |
+| `typescript-fetch` | STABLE | Zero-dependency browser/Node clients using native Fetch |
+| `typescript-angular` | STABLE | Angular 9–21 applications using HttpClient |
+| `typescript-node` | STABLE | Node.js applications with `request` library |
+| `typescript-nestjs` | EXPERIMENTAL | NestJS microservice clients |
+| `typescript-rxjs` | STABLE | RxJS-based reactive clients |
+| `typescript-redux-query` | STABLE | Redux applications using redux-query |
+| `typescript-inversify` | STABLE | Projects using InversifyJS dependency injection |
+| `typescript-jquery` | STABLE | Legacy jQuery-based projects |
+| `typescript-aurelia` | STABLE | Aurelia framework |
+| `typescript` | EXPERIMENTAL | Vanilla TypeScript (no framework assumptions) |
+
+---
+
+## typescript-axios
+
+The `typescript-axios` generator produces a client library built on top of [Axios](https://axios-http.com). It is the most commonly used TypeScript generator for browser and Node.js applications.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `npmName` | String | `null` | npm package name (required for a full package) |
+| `npmVersion` | String | `1.0.0` | npm package version |
+| `axiosVersion` | String | `^1.13.5` | Axios version to use in `package.json` |
+| `withSeparateModelsAndApi` | Boolean | `false` | Output models and API in separate folders; requires `apiPackage` and `modelPackage` |
+| `apiPackage` | String | `null` | Package folder for API classes (used with `withSeparateModelsAndApi`) |
+| `modelPackage` | String | `null` | Package folder for model classes |
+| `withInterfaces` | Boolean | `false` | Generate interfaces alongside default class implementations |
+| `useSingleRequestParameter` | Boolean | `false` | Wrap all endpoint parameters into a single object argument |
+| `enumPropertyNaming` | Enum | `PascalCase` | Naming convention for enum properties: `camelCase`, `PascalCase`, `snake_case`, `UPPERCASE`, `original` |
+| `enumNameSuffix` | String | `Enum` | Suffix appended to all enum names |
+| `stringEnums` | Boolean | `false` | Generate string enums instead of numeric enums |
+| `supportsES6` | Boolean | `false` | Emit ES6-compatible code |
+| `importFileExtension` | String | _(empty)_ | File extension for relative imports (e.g. `.js` or `.mjs` for ESM) |
+| `paramNaming` | Enum | `camelCase` | Naming convention for parameters |
+| `withNodeImports` | Boolean | `false` | Add Node.js-specific imports |
+| `withAWSV4Signature` | Boolean | `false` | Include AWS Signature v4 support |
+| `nullSafeAdditionalProps` | Boolean | `false` | Declare additional-properties indexer as possibly `undefined` |
+| `snapshot` | Boolean | `false` | Append `-SNAPSHOT.yyyyMMddHHmm` to the version |
+
+### Generation example
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g typescript-axios \
+  -o ./petstore-ts-axios \
+  --additional-properties=npmName=petstore-client,npmVersion=1.0.0,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=model
+```
+
+### Generated structure
+
+```
+petstore-ts-axios/
+├── package.json
+├── tsconfig.json
+├── .npmignore
+├── index.ts                     # Barrel export
+├── api/
+│   ├── pet-api.ts               # PetApi class
+│   └── store-api.ts
+├── model/
+│   ├── pet.ts                   # Pet interface/class
+│   └── category.ts
+└── base.ts                      # Base Axios configuration
+```
+
+### Usage
+
+```typescript
+import { Configuration, PetApi, Pet } from 'petstore-client';
+
+const config = new Configuration({
+  basePath: 'https://petstore3.swagger.io/api/v3',
+  accessToken: 'YOUR_TOKEN',
+});
+
+const petApi = new PetApi(config);
+
+// Find pet by ID
+const pet: Pet = (await petApi.getPetById(1)).data;
+console.log(pet.name);
+
+// Add a new pet
+await petApi.addPet({
+  name: 'Fluffy',
+  photoUrls: [],
+  status: 'available',
+});
+```
+
+<Tip>
+  Set `withInterfaces=true` to generate `PetApiInterface` alongside `PetApi`. This makes it easier to mock the API in tests.
+</Tip>
+
+---
+
+## typescript-fetch
+
+The `typescript-fetch` generator uses the browser and Node.js native `fetch` API. It has no HTTP library dependency, making it ideal for modern environments where Fetch is available globally.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `npmName` | String | `null` | npm package name |
+| `npmVersion` | String | `1.0.0` | npm package version |
+| `modelPropertyNaming` | Enum | `camelCase` | Property naming: `camelCase`, `PascalCase`, `snake_case`, `original` |
+| `fileNaming` | Enum | `PascalCase` | Output file naming: `PascalCase`, `camelCase`, `kebab-case` |
+| `useSingleRequestParameter` | Boolean | `true` | Wrap parameters into one object argument (default `true`) |
+| `withInterfaces` | Boolean | `false` | Generate interfaces next to implementations |
+| `prefixParameterInterfaces` | Boolean | `false` | Prefix parameter interfaces with the API class name |
+| `stringEnums` | Boolean | `false` | Generate string enums |
+| `enumNameSuffix` | String | `Enum` | Suffix for enum names |
+| `sagasAndRecords` | Boolean | `false` | Generate redux-saga and ImmutableJS files |
+| `withoutRuntimeChecks` | Boolean | `false` | Skip runtime payload validation (cast to types directly) |
+| `importFileExtension` | String | _(empty)_ | File extension for relative imports (e.g. `.js` for ESM) |
+| `nullSafeAdditionalProps` | Boolean | `false` | Make additional-properties indexer return `T \| undefined` |
+| `validationAttributes` | Boolean | `false` | Emit validation attribute annotations on model properties |
+
+### Generation example
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g typescript-fetch \
+  -o ./petstore-ts-fetch \
+  --additional-properties=npmName=petstore-fetch-client,typescriptThreePlus=true
+```
+
+### Usage
+
+```typescript
+import { Configuration, PetApi } from './petstore-fetch-client';
+
+const api = new PetApi(new Configuration({
+  basePath: 'https://petstore3.swagger.io/api/v3',
+  headers: { Authorization: 'Bearer YOUR_TOKEN' },
+}));
+
+const pet = await api.getPetById({ petId: 1 });
+console.log(pet.name);
+```
+
+---
+
+## typescript-angular
+
+The `typescript-angular` generator creates an Angular service library using `HttpClient`. It supports Angular versions 9 through 21.
+
+### Key options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `npmName` | String | `null` | npm package name |
+| `ngVersion` | String | `21.0.0` | Target Angular version (at least 9.0.0) |
+| `providedIn` | Enum | `root` | `@Injectable` scope: `root`, `none`, `any`, `platform` |
+| `serviceFileSuffix` | String | `.service` | Suffix for service filenames |
+| `serviceSuffix` | String | `Service` | Suffix for generated service class names |
+| `modelFileSuffix` | String | `null` | Suffix for model filenames |
+| `modelSuffix` | String | `null` | Suffix for generated model class names |
+| `fileNaming` | Enum | `camelCase` | Output file naming: `camelCase`, `kebab-case` |
+| `modelPropertyNaming` | Enum | `original` | Property naming convention |
+| `taggedUnions` | Boolean | `false` | Use discriminators to create tagged unions |
+| `withInterfaces` | Boolean | `false` | Generate interfaces next to implementations |
+| `queryParamObjectFormat` | Enum | `dot` | Format for query param objects: `dot`, `json`, `key` |
+| `enumPropertyNaming` | Enum | `PascalCase` | Naming convention for enum properties |
+| `stringEnums` | Boolean | `false` | Generate string enums |
+| `apiModulePrefix` | String | `null` | Prefix for the generated `ApiModule` |
+
+### Generation example
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g typescript-angular \
+  -o ./petstore-ng-client \
+  --additional-properties=npmName=@myorg/petstore-client,ngVersion=17.0.0,providedIn=root,fileNaming=kebab-case
+```
+
+### Usage in an Angular module
+
+```typescript
+// app.module.ts
+import { NgModule } from '@angular/core';
+import { ApiModule, Configuration } from '@myorg/petstore-client';
+
+@NgModule({
+  imports: [
+    ApiModule.forRoot(() => new Configuration({
+      basePath: 'https://petstore3.swagger.io/api/v3',
+    })),
+  ],
+})
+export class AppModule {}
+```
+
+```typescript
+// my.component.ts
+import { Component, OnInit } from '@angular/core';
+import { PetService, Pet } from '@myorg/petstore-client';
+
+@Component({ selector: 'app-root', template: '' })
+export class MyComponent implements OnInit {
+  constructor(private petService: PetService) {}
+
+  ngOnInit(): void {
+    this.petService.getPetById(1).subscribe((pet: Pet) => {
+      console.log(pet.name);
+    });
+  }
+}
+```
+
+<Note>
+  The `typescript-angular` generator targets Angular 9 through 21. The default `ngVersion` is `21.0.0`. Set `ngVersion` explicitly to match your project's Angular version so compatible `rxjs`, `zone.js`, and `ng-packagr` versions are used.
+</Note>
+
+---
+
+## typescript-node
+
+The `typescript-node` generator targets Node.js applications using the `request` npm package as its HTTP transport.
+
+### Generation example
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g typescript-node \
+  -o ./petstore-ts-node \
+  --additional-properties=npmName=petstore-node-client
+```
+
+---
+
+## typescript-nestjs (experimental)
+
+The `typescript-nestjs` generator produces client code designed to be consumed from a NestJS application. This generator is **experimental** — its output format may change between releases.
+
+```bash
+openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g typescript-nestjs \
+  -o ./petstore-nestjs-client \
+  --additional-properties=npmName=petstore-nestjs-client
+```
+
+<Warning>
+  The `typescript-nestjs` generator is experimental. Evaluate the generated output before using it in production.
+</Warning>
+
+---
+
+## Common TypeScript options
+
+These options are available across most TypeScript generators:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `enumUnknownDefaultCase` | `false` | Add an `unknown_default_open_api` fallback case to every enum |
+| `sortModelPropertiesByRequiredFlag` | `true` | Place required properties before optional ones |
+| `sortParamsByRequiredFlag` | `true` | Place required parameters before optional ones |
+| `ensureUniqueParams` | `true` | Rename duplicate parameter names within an operation |
+| `allowUnicodeIdentifiers` | `false` | Allow unicode characters in identifier names |
+| `useSquareBracketsInArrayNames` | `false` | Append `[]` to array attribute names |

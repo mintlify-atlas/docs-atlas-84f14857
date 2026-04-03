@@ -1,0 +1,239 @@
+---
+title: Java Client Generator
+description: Generate a Java client SDK from an OpenAPI specification using Jersey, OkHttp, Feign, RestTemplate, WebClient, Retrofit 2, and more.
+---
+
+The `java` generator produces a fully-featured Java client library. It supports a wide range of HTTP libraries through its **library** option, making it suitable for plain Java, Android, Spring-based, or reactive projects.
+
+| Property | Value |
+|----------|-------|
+| Generator name | `java` |
+| Stability | STABLE |
+| Generator type | CLIENT |
+| Default templating engine | mustache |
+
+## Available libraries
+
+The `library` option controls which HTTP client and JSON serializer are used. The default is `okhttp-gson`.
+
+<AccordionGroup>
+  <Accordion title="okhttp-gson (default)">
+    HTTP client: OkHttp 4.11.0. JSON processing: Gson 2.10.1.
+
+    Best for Android projects and general-purpose Java. Supports Parcelable models (`-DparcelableModel=true`) and gzip encoding (`-DuseGzipFeature=true`).
+  </Accordion>
+  <Accordion title="jersey2 / jersey3">
+    HTTP client: Jersey client 2.25.1 / 3.1.1. JSON processing: Jackson 2.17.1.
+
+    Use `jersey3` when targeting Jakarta EE 9+ namespaces (`javax.*` → `jakarta.*`). Set `useJakartaEe=true` to switch the namespace.
+  </Accordion>
+  <Accordion title="feign / feign-hc5">
+    HTTP client: OpenFeign 13.2.1 (optionally with HttpClient5 5.4.2). JSON processing: Jackson 2.17.1 or Gson 2.10.1.
+
+    Declarative REST client. Ideal when you want compile-time-checked HTTP interfaces.
+  </Accordion>
+  <Accordion title="resttemplate">
+    HTTP client: Spring RestTemplate 5.3.33 (or 6.2.x with `useJakartaEe=true`, or 7.x with `useSpringBoot4=true`). JSON processing: Jackson 2.x.
+
+    Classic synchronous Spring client. Suitable for Spring Boot 2 and 3 applications.
+  </Accordion>
+  <Accordion title="webclient">
+    HTTP client: Spring WebClient 5.1.18 (or 7.x with `useSpringBoot4=true`). JSON processing: Jackson 2.17.1.
+
+    Reactive, non-blocking Spring client backed by Project Reactor. Use `webclientBlockingOperations=true` to force synchronous calls.
+  </Accordion>
+  <Accordion title="restclient">
+    HTTP client: Spring RestClient 6.1.6 (or 7.x with `useSpringBoot4=true`). JSON processing: Jackson 2.17.1.
+
+    Spring 6.1+ fluent synchronous HTTP client. Requires Spring Boot 3.2+.
+  </Accordion>
+  <Accordion title="retrofit2">
+    HTTP client: OkHttp 4.11.0 with Retrofit 2.5.0. JSON processing: Gson 2.10.1 or Jackson 2.17.1.
+
+    Enables RxJava adapters: `-DuseRxJava2=true` or `-DuseRxJava3=true`.
+  </Accordion>
+  <Accordion title="native">
+    HTTP client: Java's built-in `HttpClient` (requires Java 11+). JSON processing: Jackson 2.17.1.
+
+    Zero external HTTP dependencies. Use `useJackson3=true` for Jackson 3.x (requires Java 17+).
+  </Accordion>
+  <Accordion title="microprofile">
+    HTTP client: MicroProfile Rest Client. JSON processing: Jackson or JSON-B.
+
+    Compatible with Quarkus, Open Liberty, and other MicroProfile runtimes.
+  </Accordion>
+  <Accordion title="resteasy">
+    HTTP client: RESTEasy 4.7.6. JSON processing: Jackson 2.17.1.
+  </Accordion>
+  <Accordion title="vertx">
+    HTTP client: Vert.x 3.5.2. JSON processing: Jackson 2.17.1.
+
+    Asynchronous, event-loop based client. Use `supportVertxFuture=true` for Vert.x 4+ Future returns.
+  </Accordion>
+  <Accordion title="google-api-client">
+    HTTP client: Google API Client 2.2.0. JSON processing: Jackson 2.17.1.
+  </Accordion>
+  <Accordion title="rest-assured">
+    HTTP client: REST Assured 5.3.2. JSON processing: Gson 2.10.1 or Jackson 2.17.1.
+
+    Designed for integration and contract testing. Java 8 only.
+  </Accordion>
+</AccordionGroup>
+
+## Key configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `library` | String | `okhttp-gson` | HTTP library to use (see above) |
+| `apiPackage` | String | `org.openapitools.client.api` | Package for generated API classes |
+| `modelPackage` | String | `org.openapitools.client.model` | Package for generated model classes |
+| `invokerPackage` | String | `org.openapitools.client` | Root package for generated code |
+| `groupId` | String | `org.openapitools` | Maven `groupId` |
+| `artifactId` | String | `openapi-java-client` | Maven `artifactId` |
+| `artifactVersion` | String | `1.0.0` | Artifact version |
+| `dateLibrary` | Enum | `java8` | Date library: `java8`, `java8-localdatetime`, `joda`, `legacy` |
+| `useJakartaEe` | Boolean | `false` | Use `jakarta.*` namespace instead of `javax.*` |
+| `useBeanValidation` | Boolean | `false` | Add `@Valid` and JSR-380 annotations to models |
+| `serializationLibrary` | Enum | _(library-dependent)_ | `jackson`, `gson`, or `jsonb` |
+| `openApiNullable` | Boolean | `true` | Enable Jackson Nullable for nullable fields |
+| `generateBuilders` | Boolean | `false` | Add builder pattern to generated models |
+| `asyncNative` | Boolean | `false` | Generate async handler variants |
+| `useSpringBoot4` | Boolean | `false` | Target Spring Boot 4.x (Spring 7 libraries) |
+| `useJackson3` | Boolean | `false` | Use Jackson 3.x (requires Java 17+; Spring libs need `useSpringBoot4=true`) |
+| `withAWSV4Signature` | Boolean | `false` | Include AWS Signature v4 support (`okhttp-gson` only) |
+| `generateClientAsBean` | Boolean | `false` | Annotate `ApiClient` and API classes with `@Component` (Spring libraries) |
+| `sourceFolder` | String | `src/main/java` | Source output folder |
+
+<Tip>
+  Pass configuration options via `--additional-properties` on the CLI, or via `configOptions` in the Maven/Gradle plugin.
+</Tip>
+
+## Generation example
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate with okhttp-gson (default)">
+    ```bash
+    openapi-generator-cli generate \
+      -i https://petstore3.swagger.io/api/v3/openapi.json \
+      -g java \
+      -o ./petstore-java-client \
+      --additional-properties=artifactId=petstore-client,groupId=com.example,artifactVersion=1.0.0
+    ```
+  </Step>
+  <Step title="Generate with Spring RestTemplate">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g java \
+      -o ./petstore-spring-client \
+      --additional-properties=library=resttemplate,useJakartaEe=true,generateClientAsBean=true,apiPackage=com.example.api,modelPackage=com.example.model
+    ```
+  </Step>
+  <Step title="Generate with native HTTP client (Java 11+)">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g java \
+      -o ./petstore-native-client \
+      --additional-properties=library=native,dateLibrary=java8,useBeanValidation=true
+    ```
+  </Step>
+</Steps>
+
+## Generated project structure
+
+```
+petstore-java-client/
+├── pom.xml
+├── README.md
+├── src/
+│   └── main/
+│       └── java/
+│           └── org/openapitools/client/
+│               ├── ApiClient.java          # HTTP client configuration
+│               ├── Configuration.java      # Default ApiClient singleton
+│               ├── Pair.java               # Query parameter helper
+│               ├── api/
+│               │   └── PetApi.java         # Generated API class per tag
+│               └── model/
+│                   ├── Pet.java            # Generated model per schema
+│                   ├── ApiResponse.java
+│                   └── Category.java
+└── src/
+    └── test/
+        └── java/
+            └── org/openapitools/client/
+                └── api/
+                    └── PetApiTest.java     # Test stubs
+```
+
+## Using the generated client
+
+<Steps>
+  <Step title="Add the dependency">
+    After running `mvn install` in the generated project, add it to your own `pom.xml`:
+
+    ```xml
+    <dependency>
+      <groupId>org.openapitools</groupId>
+      <artifactId>openapi-java-client</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    ```
+  </Step>
+  <Step title="Create and configure ApiClient">
+    ```java
+    import org.openapitools.client.ApiClient;
+    import org.openapitools.client.api.PetApi;
+    import org.openapitools.client.model.Pet;
+
+    ApiClient client = new ApiClient();
+    client.setBasePath("https://petstore3.swagger.io/api/v3");
+
+    // API key authentication
+    client.setApiKey("YOUR_API_KEY");
+
+    // Bearer token authentication
+    client.setBearerToken("YOUR_TOKEN");
+    ```
+  </Step>
+  <Step title="Call an endpoint">
+    ```java
+    PetApi petApi = new PetApi(client);
+
+    // Find pet by ID
+    Pet pet = petApi.getPetById(1L);
+    System.out.println("Pet name: " + pet.getName());
+
+    // Add a new pet
+    Pet newPet = new Pet();
+    newPet.setName("Fluffy");
+    newPet.setStatus(Pet.StatusEnum.AVAILABLE);
+    Pet created = petApi.addPet(newPet);
+    System.out.println("Created pet with ID: " + created.getId());
+    ```
+  </Step>
+</Steps>
+
+## Vendor extensions
+
+| Extension | Applicable to | Description |
+|-----------|---------------|-------------|
+| `x-discriminator-value` | MODEL | Override the discriminator value for model inheritance |
+| `x-implements` | MODEL | Comma-separated list of interfaces the model implements |
+| `x-setter-extra-annotation` | FIELD | Custom annotation on the Java setter |
+| `x-tags` | OPERATION | Assign the operation to multiple Swagger tags |
+| `x-accepts` | OPERATION | Override the `Accept` header value |
+| `x-content-type` | OPERATION | Override the `Content-Type` header value |
+| `x-class-extra-annotation` | MODEL | Custom annotations at the class level |
+| `x-field-extra-annotation` | FIELD, OPERATION_PARAMETER | Custom annotations at the field level |
+| `x-webclient-blocking` | OPERATION | Force a WebClient operation to be blocking |
+
+<Note>
+  The `microprofile` library does not support `openApiNullable`. Disable it when targeting MicroProfile: `--additional-properties=openApiNullable=false`.
+</Note>

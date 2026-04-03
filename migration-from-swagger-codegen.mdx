@@ -1,0 +1,226 @@
+---
+title: "Migrating from Swagger Codegen"
+description: "A step-by-step guide to migrating from Swagger Codegen to OpenAPI Generator."
+---
+
+OpenAPI Generator is a fork of `swagger-codegen` taken between versions `2.3.1` and `2.4.0`. It provides the same functionality and can be used as a drop-in replacement. This guide covers the major differences to help you migrate.
+
+<Note>
+  For background on why the fork was created, see the [Fork Q&A](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/qna.md).
+</Note>
+
+## Why migrate?
+
+<CardGroup cols={2}>
+  <Card title="Community-driven" icon="users">
+    More than 40 top Swagger Codegen contributors joined OpenAPI Generator as founding team members. Decisions are made by the community.
+  </Card>
+  <Card title="More generators" icon="grid-2-plus">
+    OpenAPI Generator supports more target languages and frameworks, with new generators added regularly.
+  </Card>
+  <Card title="Faster release cycle" icon="clock">
+    Weekly patch releases and monthly minor releases mean you don't wait months for bug fixes to ship.
+  </Card>
+  <Card title="Active development" icon="code">
+    A community-driven roadmap means the project evolves based on real user needs.
+  </Card>
+</CardGroup>
+
+---
+
+## Migration steps
+
+<Steps>
+  <Step title="Update Docker images">
+    The Docker images are available on DockerHub at [https://hub.docker.com/u/openapitools/](https://hub.docker.com/u/openapitools/).
+
+    **CLI image:**
+
+    | Before | After |
+    |--------|-------|
+    | `swaggerapi/swagger-codegen-cli` | `openapitools/openapi-generator-cli` |
+
+    **Web service image:**
+
+    | Before | After |
+    |--------|-------|
+    | `swaggerapi/swagger-generator` | `openapitools/openapi-generator-online` |
+  </Step>
+
+  <Step title="Update Maven coordinates">
+    Replace all `io.swagger` group IDs with `org.openapitools`.
+
+    **Core library:**
+
+    <CodeGroup>
+
+    ```xml Before
+    <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-codegen</artifactId>
+    </dependency>
+    ```
+
+    ```xml After
+    <dependency>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator</artifactId>
+    </dependency>
+    ```
+
+    </CodeGroup>
+
+    **CLI:**
+
+    <CodeGroup>
+
+    ```xml Before
+    <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-codegen-cli</artifactId>
+    </dependency>
+    ```
+
+    ```xml After
+    <dependency>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-cli</artifactId>
+    </dependency>
+    ```
+
+    </CodeGroup>
+
+    **Maven plugin:**
+
+    <CodeGroup>
+
+    ```xml Before
+    <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-codegen-maven-plugin</artifactId>
+    </dependency>
+    ```
+
+    ```xml After
+    <dependency>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+    </dependency>
+    ```
+
+    </CodeGroup>
+  </Step>
+
+  <Step title="Update Maven plugin configuration">
+    OpenAPI Generator 3.0.0 introduced `<generatorName>` and deprecated `<language>`, because generator names encompass more than just a language.
+
+    If both `<generatorName>` and `<language>` are present in your config, the build will fail with an error. If only `<language>` is provided, you will receive instructions on how to update to the new config.
+
+    Replace `<language>` with `<generatorName>` in your Maven plugin configuration.
+  </Step>
+
+  <Step title="Update generator names">
+    When running OpenAPI Generator, you select a target generator with the `-g` option. Some generator names changed for consistency. Old names continue to work with a warning.
+
+    | Swagger Codegen name | OpenAPI Generator name |
+    |---------------------|------------------------|
+    | `akka-scala` | `scala-akka` |
+    | `scala` | `scala-httpclient` |
+    | `jaxrs` | `jaxrs-jersey` |
+    | `qt5cpp` | `cpp-qt5` |
+    | `cpprest` | `cpp-restsdk` |
+    | `tizen` | `cpp-tizen` |
+    | `sinatra` | `ruby-sinatra` |
+    | `swift` | `swift2-deprecated` |
+    | `lumen` | `php-lumen` |
+    | `slim` | `php-slim` |
+    | `ze-ph` | `php-mezzio-ph` |
+
+    <Tip>
+      OpenAPI Generator provides a temporary mapping for old names. You will receive a warning with instructions to migrate to the new name.
+    </Tip>
+  </Step>
+
+  <Step title="Update parameter names">
+    Some parameter names were renamed. In most cases, replace "Swagger" with "OpenAPI":
+
+    | Swagger Codegen parameter | OpenAPI Generator parameter |
+    |--------------------------|----------------------------|
+    | `debugSwagger` | `debugOpenAPI` |
+    | `GenerateSwaggerMetadata` | `GenerateOpenAPIMetadata` |
+    | `swagger.codegen.undertow.apipackage` | `openapi.codegen.undertow.apipackage` |
+    | `swagger.codegen.undertow.modelpackage` | `openapi.codegen.undertow.modelpackage` |
+  </Step>
+
+  <Step title="Update customized Mustache templates">
+    The template variable `{{datatype}}` was renamed to `{{dataType}}` for consistency. The corresponding Java field `CodegenProperty.datatype` was renamed to `CodegenProperty.dataType`.
+
+    <Note>
+      If you are not using customized templates with the `-t` option, you can skip this step.
+    </Note>
+  </Step>
+
+  <Step title="Update the ignore file">
+    `.swagger-codegen-ignore` is replaced by `.openapi-generator-ignore`. The syntax inside the file stays the same.
+
+    You do not need to rename the file manually. OpenAPI Generator will rename it automatically when run against an existing output directory.
+  </Step>
+
+  <Step title="Update the metadata folder">
+    The metadata folder (which stores the `VERSION` file) is now called `.openapi-generator/` instead of `.swagger-codegen/`.
+  </Step>
+</Steps>
+
+---
+
+## Additional changes
+
+### Default values in generated code
+
+If you use a generator without specifying every parameter, you may see differences in the generated code. Default package names have changed — `Swagger` is replaced by `OpenAPITools` and `io.swagger` is replaced by `org.openapitools`.
+
+For example, if you previously generated Java code without specifying `apiPackage`, a file like `org/openapitools/api/PetApi.java` will now be generated instead of `io/swagger/api/PetApi.java`.
+
+To preserve the old defaults, explicitly set the parameter value:
+
+```bash
+openapi-generator generate -g java --additional-properties apiPackage=io.swagger ...
+```
+
+### Fully qualified class names for extended generators
+
+If you have extended any generators, replace the old package name with the new one:
+
+| Before | After |
+|--------|-------|
+| `io.swagger.codegen` | `org.openapitools.codegen` |
+
+For example: `org.openapitools.codegen.DefaultGenerator`
+
+### Body parameter name
+
+Since `4.0.0-beta`, the body parameter name in OAS v2 is automatically preserved in the vendor extension `x-codegen-request-body-name`.
+
+In OpenAPI Spec v3, there is no body parameter — it is replaced by the [Request Body Object](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#request-body-object). The parameter name is generated automatically based on the model name. To control the name, add the `x-codegen-request-body-name` vendor extension to the operation:
+
+```yaml
+paths:
+  /pet:
+    post:
+      operationId: addPet
+      x-codegen-request-body-name: new_body_name
+      requestBody:
+        $ref: '#/components/requestBodies/Pet'
+```
+
+<Note>
+  If your API client uses named parameters in function calls (e.g. Perl required/optional parameters, Ruby optional parameters), you need to add `x-codegen-request-body-name` to restore the original body parameter name.
+</Note>
+
+### Default basePath
+
+The default `basePath` changed from `https://localhost` to `http://localhost` (without TLS).
+
+### Nullable fields
+
+OpenAPI Spec v3 has better support for `nullable`. If you are still using OpenAPI/Swagger Spec v2, use `x-nullable: true` instead of the v3 `nullable` keyword.

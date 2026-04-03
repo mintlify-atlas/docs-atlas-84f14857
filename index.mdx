@@ -1,97 +1,113 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "OpenAPI Generator"
+description: "Automatically generate API client libraries, server stubs, documentation, and configuration from an OpenAPI Specification."
 ---
 
-## Setting up
+OpenAPI Generator allows generation of API client libraries (SDK generation), server stubs, documentation, and configuration automatically given an [OpenAPI Spec](https://github.com/OAI/OpenAPI-Specification) (v2 and v3). It supports over 50 languages and frameworks — from Java and TypeScript to Go, Python, Kotlin, Rust, and many more.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install via npm, Homebrew, pip, Docker, or JAR — choose the method that fits your workflow.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Generate your first API client or server stub in under 5 minutes.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="CLI Reference" icon="terminal" href="/usage/cli">
+    Explore every command, flag, and option available in the CLI.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Generator List" icon="list" href="/generators/index">
+    Browse all supported client, server, and documentation generators.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What can you generate?
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="API Clients (SDKs)" icon="code" href="/generators/index">
+    Generate client libraries in Java, TypeScript, Python, Go, Kotlin, Swift, Ruby, C#, Rust, and 40+ more languages.
+  </Card>
+  <Card title="Server Stubs" icon="server" href="/generators/servers/spring">
+    Bootstrap server implementations for Spring, FastAPI, Go, Node.js, Kotlin, and many other frameworks.
+  </Card>
+  <Card title="Documentation" icon="file-lines" href="/generators/others/documentation">
+    Auto-generate HTML, Markdown, AsciiDoc, or Confluence Wiki docs from your spec.
+  </Card>
+  <Card title="Schema & Config" icon="database" href="/generators/others/schema">
+    Generate MySQL schemas, GraphQL schemas, Protocol Buffers, Postman Collections, and more.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Get started in 3 steps
 
-## Need inspiration?
+<Steps>
+  <Step title="Install OpenAPI Generator">
+    Install using your preferred method:
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    ```bash npm
+    npm install @openapitools/openapi-generator-cli -g
+    ```
+
+    ```bash Homebrew
+    brew install openapi-generator
+    ```
+
+    ```bash Docker
+    docker pull openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Point it at your OpenAPI spec">
+    Use any valid OpenAPI 2.0 or 3.0 specification — a local file, a URL, or the Petstore example to get started immediately.
+  </Step>
+  <Step title="Generate and use your code">
+    Run the `generate` command with your chosen generator and output directory. The generated code is immediately usable.
+
+    ```bash
+    openapi-generator-cli generate \
+      -i petstore.yaml \
+      -g typescript-axios \
+      -o ./generated-client
+    ```
+  </Step>
+</Steps>
+
+## Popular generators
+
+<CardGroup cols={3}>
+  <Card title="Java" icon="java" href="/generators/clients/java">
+    Multiple library options including OkHttp, Feign, RestTemplate, and Spring WebClient.
+  </Card>
+  <Card title="TypeScript" icon="js" href="/generators/clients/typescript">
+    Supports Angular, Axios, Fetch, Node, NestJS, and more.
+  </Card>
+  <Card title="Python" icon="python" href="/generators/clients/python">
+    Modern Python client with full type hints and async support.
+  </Card>
+  <Card title="Go" icon="golang" href="/generators/clients/go">
+    Idiomatic Go client with full OpenAPI v3 support.
+  </Card>
+  <Card title="Spring" icon="leaf" href="/generators/servers/spring">
+    Generate Spring Boot server stubs from your API spec.
+  </Card>
+  <Card title="FastAPI" icon="bolt" href="/generators/servers/python-fastapi">
+    Python FastAPI server stubs with automatic Pydantic models.
+  </Card>
+</CardGroup>
+
+## Integrate into your build
+
+OpenAPI Generator works seamlessly in automated workflows:
+
+<CardGroup cols={2}>
+  <Card title="Maven Plugin" icon="box" href="/integrations/maven">
+    Auto-generate code during your Maven build lifecycle.
+  </Card>
+  <Card title="Gradle Plugin" icon="gear" href="/integrations/gradle">
+    Integrate generation as a Gradle task in your build.
+  </Card>
+  <Card title="CI/CD Integration" icon="arrows-rotate" href="/integrations/ci-cd">
+    Keep generated code in sync automatically on every spec change.
+  </Card>
+  <Card title="Online API" icon="globe" href="/integrations/online">
+    Use the hosted REST API for on-demand generation without local install.
+  </Card>
+</CardGroup>

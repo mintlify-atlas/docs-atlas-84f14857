@@ -1,0 +1,287 @@
+---
+title: Maven Plugin
+description: Generate API clients and server stubs from OpenAPI specs as part of your Maven build lifecycle.
+---
+
+The OpenAPI Generator Maven plugin integrates code generation directly into your Maven build. It runs during the `generate-sources` phase by default, so generated sources are available to compile without any manual steps.
+
+## Plugin Coordinates
+
+| Property | Value |
+|---|---|
+| `groupId` | `org.openapitools` |
+| `artifactId` | `openapi-generator-maven-plugin` |
+| `version` | `7.19.0` |
+
+## Basic Setup
+
+Add the plugin to the `<build><plugins>` section of your `pom.xml`:
+
+```xml
+<plugin>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-generator-maven-plugin</artifactId>
+    <version>7.19.0</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>generate</goal>
+            </goals>
+            <configuration>
+                <inputSpec>${project.basedir}/src/main/resources/api.yaml</inputSpec>
+                <generatorName>java</generatorName>
+                <configOptions>
+                    <sourceFolder>src/gen/java/main</sourceFolder>
+                </configOptions>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+Then run:
+
+```bash
+mvn clean compile
+```
+
+<Note>
+  The generated sources directory is automatically added to the Maven compile source root, so generated Java types are compiled and included in your project artifact.
+</Note>
+
+## Examples
+
+### Generating a Java Client
+
+```xml
+<plugin>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-generator-maven-plugin</artifactId>
+    <version>7.19.0</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>generate</goal>
+            </goals>
+            <configuration>
+                <inputSpec>${project.basedir}/src/main/resources/api.yaml</inputSpec>
+                <generatorName>java</generatorName>
+                <output>${project.build.directory}/generated-sources/openapi</output>
+                <apiPackage>com.example.api</apiPackage>
+                <modelPackage>com.example.model</modelPackage>
+                <invokerPackage>com.example.invoker</invokerPackage>
+                <configOptions>
+                    <sourceFolder>src/gen/java/main</sourceFolder>
+                    <dateLibrary>java8</dateLibrary>
+                    <library>resttemplate</library>
+                </configOptions>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+### Generating a Spring Server Stub
+
+```xml
+<plugin>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-generator-maven-plugin</artifactId>
+    <version>7.19.0</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>generate</goal>
+            </goals>
+            <configuration>
+                <inputSpec>${project.basedir}/src/main/resources/api.yaml</inputSpec>
+                <generatorName>spring</generatorName>
+                <output>${project.build.directory}/generated-sources/openapi</output>
+                <apiPackage>com.example.api</apiPackage>
+                <modelPackage>com.example.model</modelPackage>
+                <invokerPackage>com.example.invoker</invokerPackage>
+                <configOptions>
+                    <sourceFolder>src/gen/java/main</sourceFolder>
+                    <interfaceOnly>true</interfaceOnly>
+                    <delegatePattern>true</delegatePattern>
+                    <library>spring-boot</library>
+                </configOptions>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+## Configuration Options
+
+### Core Options
+
+| Option | System Property | Description |
+|---|---|---|
+| `inputSpec` | `openapi.generator.maven.plugin.inputSpec` | Path to the OpenAPI spec file |
+| `generatorName` | `openapi.generator.maven.plugin.generatorName` | Target generator name (e.g. `java`, `spring`, `python`) |
+| `output` | `openapi.generator.maven.plugin.output` | Output directory (default: `${project.build.directory}/generated-sources/openapi`) |
+| `configOptions` | N/A | Map of generator-specific parameters |
+| `globalProperties` | N/A | Map of global properties available to all generation phases |
+| `configurationFile` | `openapi.generator.maven.plugin.configurationFile` | Path to a JSON config file |
+| `verbose` | `openapi.generator.maven.plugin.verbose` | Enable verbose output (default: `false`) |
+| `cleanupOutput` | `openapi.generator.maven.plugin.cleanupOutput` | Clean the output directory before generating (default: `false`) |
+| `skipOverwrite` | `openapi.generator.maven.plugin.skipOverwrite` | Skip overwriting existing files (default: `false`) |
+| `skip` | `codegen.skip` | Skip code generation entirely (default: `false`) |
+| `skipIfSpecIsUnchanged` | `codegen.skipIfSpecIsUnchanged` | Skip if the spec is older than the output folder (default: `false`) |
+
+### Package Options
+
+| Option | System Property | Description |
+|---|---|---|
+| `apiPackage` | `openapi.generator.maven.plugin.apiPackage` | Package for generated API classes |
+| `modelPackage` | `openapi.generator.maven.plugin.modelPackage` | Package for generated model classes |
+| `invokerPackage` | `openapi.generator.maven.plugin.invokerPackage` | Package for generated invoker classes |
+| `packageName` | `openapi.generator.maven.plugin.packageName` | Default package for all generated classes |
+| `modelNamePrefix` | `openapi.generator.maven.plugin.modelNamePrefix` | Prefix prepended to all model class names |
+| `modelNameSuffix` | `openapi.generator.maven.plugin.modelNameSuffix` | Suffix appended to all model class names |
+| `apiNameSuffix` | `openapi.generator.maven.plugin.apiNameSuffix` | Suffix appended to all API class names |
+
+### Generation Control
+
+| Option | System Property | Description |
+|---|---|---|
+| `generateApis` | `openapi.generator.maven.plugin.generateApis` | Generate API classes (default: `true`) |
+| `generateModels` | `openapi.generator.maven.plugin.generateModels` | Generate model classes (default: `true`) |
+| `generateSupportingFiles` | `openapi.generator.maven.plugin.generateSupportingFiles` | Generate supporting files (default: `true`) |
+| `generateModelTests` | `openapi.generator.maven.plugin.generateModelTests` | Generate model test files (default: `true`) |
+| `generateModelDocumentation` | `openapi.generator.maven.plugin.generateModelDocumentation` | Generate model documentation (default: `true`) |
+| `generateApiTests` | `openapi.generator.maven.plugin.generateApiTests` | Generate API test files (default: `true`) |
+| `generateApiDocumentation` | `openapi.generator.maven.plugin.generateApiDocumentation` | Generate API documentation (default: `true`) |
+| `apisToGenerate` | `openapi.generator.maven.plugin.apisToGenerate` | Comma-separated list of APIs to generate (default: all) |
+| `modelsToGenerate` | `openapi.generator.maven.plugin.modelsToGenerate` | Comma-separated list of models to generate (default: all) |
+
+### Template and Engine
+
+| Option | System Property | Description |
+|---|---|---|
+| `templateDirectory` | `openapi.generator.maven.plugin.templateDirectory` | Directory containing custom Mustache templates |
+| `templateResourcePath` | `openapi.generator.maven.plugin.templateResourcePath` | Template directory via resource path (overrides `templateDirectory`) |
+| `engine` | `openapi.generator.maven.plugin.engine` | Templating engine: `mustache` (default) or `handlebars` (beta) |
+
+### Spec Handling
+
+| Option | System Property | Description |
+|---|---|---|
+| `skipValidateSpec` | `openapi.generator.maven.plugin.skipValidateSpec` | Skip spec validation before generation |
+| `strictSpec` | `openapi.generator.maven.plugin.strictSpec` | Strictly adhere to MUST/SHALL wording in the OpenAPI spec |
+| `openapiNormalizer` | `openapi.generator.maven.plugin.openapiNormalizer` | Rules for the OpenAPI normalizer in the form `RULE_1=true,RULE_2=original` |
+
+### Git Integration
+
+| Option | System Property | Description |
+|---|---|---|
+| `gitHost` | `openapi.generator.maven.plugin.gitHost` | Git host (e.g. `gitlab.com`) |
+| `gitUserId` | `openapi.generator.maven.plugin.gitUserId` | Git user ID |
+| `gitRepoId` | `openapi.generator.maven.plugin.gitRepoId` | Git repository ID |
+
+## Configuring Map Options
+
+Options documented as a **map** (such as `configOptions`, `globalProperties`, `typeMappings`) use free-form XML child nodes:
+
+```xml
+<configuration>
+    <globalProperties>
+        <models>User:Pet</models>
+    </globalProperties>
+</configuration>
+```
+
+This is equivalent to:
+
+```xml
+<configuration>
+    <generateModels>true</generateModels>
+    <modelsToGenerate>User:Pet</modelsToGenerate>
+</configuration>
+```
+
+## Type and Import Mappings
+
+Override the default mapping between OpenAPI types and generated code types using `typeMappings`:
+
+```xml
+<configuration>
+    <typeMappings>
+        <!-- Map Double to BigDecimal -->
+        <typeMapping>Double=java.math.BigDecimal</typeMapping>
+    </typeMappings>
+</configuration>
+```
+
+When using types not already included in the generator, add a corresponding `importMapping`:
+
+```xml
+<configuration>
+    <typeMappings>
+        <typeMapping>binary=StreamingOutput</typeMapping>
+        <typeMapping>file=StreamingOutput</typeMapping>
+    </typeMappings>
+    <importMappings>
+        <importMapping>StreamingOutput=javax.ws.rs.core.StreamingOutput</importMapping>
+    </importMappings>
+</configuration>
+```
+
+## Custom Generator
+
+To use a custom generator class from a dependency jar, specify its fully qualified class name as `generatorName` and add the dependency to the plugin's `<dependencies>`:
+
+```xml
+<plugin>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-generator-maven-plugin</artifactId>
+    <version>7.19.0</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>generate</goal>
+            </goals>
+            <configuration>
+                <inputSpec>${project.basedir}/src/main/resources/yaml/yamlfilename.yaml</inputSpec>
+                <generatorName>com.my.package.for.GeneratorLanguage</generatorName>
+                <templateDirectory>myTemplateDir</templateDirectory>
+                <output>${project.build.directory}/generated-sources</output>
+                <apiPackage>${default.package}.handler</apiPackage>
+                <modelPackage>${default.package}.model</modelPackage>
+                <invokerPackage>${default.package}.handler</invokerPackage>
+            </configuration>
+        </execution>
+    </executions>
+    <dependencies>
+        <dependency>
+            <groupId>com.my.generator</groupId>
+            <artifactId>customgenerator</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+</plugin>
+```
+
+## Swagger Annotations
+
+<Warning>
+  The generated models use Swagger v2 annotations (`@ApiModelProperty`). Adding the `io.swagger.core.v3:swagger-annotations` dependency is **not** binary compatible with these annotations and will cause compile failures.
+</Warning>
+
+Use the following dependency instead:
+
+```xml
+<dependency>
+    <groupId>io.swagger.parser.v3</groupId>
+    <artifactId>swagger-parser</artifactId>
+</dependency>
+```
+
+## Getting Generator-Specific Options
+
+To see all available `configOptions` for a given generator, run:
+
+```bash
+mvn -Dcodegen.configHelp -Dopenapi.generator.maven.plugin.generatorName=java compile
+```

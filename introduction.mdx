@@ -1,0 +1,126 @@
+---
+title: "Introduction"
+description: "OpenAPI Generator automatically generates API client libraries, server stubs, documentation, and configuration from an OpenAPI Specification."
+---
+
+OpenAPI Generator allows generation of API client libraries (SDK generation), server stubs, documentation, and configuration files automatically from an [OpenAPI Specification](https://github.com/OAI/OpenAPI-Specification). Both OpenAPI v2 (Swagger) and v3 (including 3.1 beta support) are supported.
+
+## What is OpenAPI Generator?
+
+Writing and maintaining API client libraries by hand is tedious, error-prone, and time-consuming. Every time your API changes, every SDK in every language needs to be updated. OpenAPI Generator solves this by automating the entire process — you define your API once in a standard OpenAPI spec, and the generator produces production-ready code across dozens of languages and frameworks.
+
+The project is a community-driven fork of Swagger Codegen, with a focus on rapid iteration, quality, and broad language support. It is released under the Apache 2.0 license.
+
+## Key capabilities
+
+- **50+ languages and frameworks** for API clients, server stubs, and documentation
+- **OpenAPI v2 and v3 support** — including Swagger 2.0 and OpenAPI 3.0/3.1
+- **Multiple invocation methods** — CLI, Maven plugin, Gradle plugin, Docker, and an online API
+- **Customizable templates** — override any part of the generated output using Mustache or Handlebars templates
+- **Spec validation** — catch errors in your OpenAPI spec before generating code
+
+## Available generators
+
+### API clients (SDKs)
+
+Generate client libraries to consume your API:
+
+| Language | Libraries / Variants |
+| -------- | -------------------- |
+| **Java** | Apache HttpClient 4.x/5.x, Jersey2, OkHttp, Retrofit, Feign, RestTemplate, Spring WebClient, Helidon, and more |
+| **TypeScript** | Angular, Axios, Fetch, Node, NestJS, Inversify, jQuery, RxJS, and more |
+| **C#** | .NET 2.0–5.0, .NET Standard 1.3–2.1, .NET Core 3.1 with RestSharp, GenericHost, or HttpClient |
+| **C++** | Arduino, cpp-restsdk, Qt5, Tizen, Unreal Engine 4 |
+| **Swift** | Swift 2.x through 6.x |
+| **Go** | Standard net/http client |
+| **Python** | Full type hints, async support |
+| **Kotlin** | Android-ready |
+| **Rust** | hyper, reqwest |
+| **Scala** | akka, http4s, scalaz, sttp, pekko |
+| **Ruby**, **PHP**, **Perl**, **Lua**, **R**, **Dart**, **Elixir**, **Haskell**, **Clojure**, **Groovy** | Single-library clients |
+| **Others** | ActionScript, Ada, Apex, Bash, C, Crystal, Elm, Eiffel, Erlang, Julia, k6, N4JS, Nim, Objective-C, OCaml, PowerShell, XoJo, Zapier |
+
+### Server stubs
+
+Bootstrap server implementations with routing and model classes pre-generated:
+
+| Language | Frameworks |
+| -------- | ---------- |
+| **Java** | Spring, JAX-RS (CXF, Jersey, RestEasy), Undertow, MSF4J, Vert.x, Apache Camel, Helidon |
+| **Kotlin** | Spring Boot, Ktor, Vert.x |
+| **Python** | FastAPI, Flask |
+| **Go** | net/http, Gin, Echo |
+| **C#** | ASP.NET Core, Azure Functions |
+| **PHP** | Laravel, Lumen, Symfony, Slim, Silex, Flight, Mezzio |
+| **Scala** | Akka, Finch, Lagom, Play, Cask, Scalatra |
+| **Ruby** | Sinatra, Rails 5 |
+| **Rust** | rust-server |
+| **Others** | Ada, C++ (Httplib, Oat++, Pistache, Restbed, Qt5), Erlang, F# (Giraffe), Haskell (Servant, Yesod), Julia, NodeJS |
+
+### Documentation generators
+
+| Generator | Output |
+| --------- | ------ |
+| `html` | Static HTML documentation |
+| `html2` | Alternative HTML layout |
+| `markdown` | Markdown documentation |
+| `asciidoc` | AsciiDoc documentation |
+| `cwiki` | Confluence Wiki markup |
+| `plantuml` | PlantUML diagrams |
+
+### Schema and other generators
+
+Generate non-code artifacts from your spec:
+
+- **GraphQL** schema
+- **JMeter** test plans
+- **Ktorm** database schema
+- **MySQL Schema**
+- **Postman Collection**
+- **Protocol Buffer** definitions
+- **WSDL**
+- **Apache2** configuration files
+
+## How to use OpenAPI Generator
+
+You can invoke the generator in several ways depending on your workflow:
+
+**CLI** — the most direct way to generate code from the command line. Available via npm, Homebrew, Scoop, PyPI, Docker, or a downloadable JAR.
+
+**Maven plugin** — integrate generation into your Maven build lifecycle so code is always in sync with your spec.
+
+**Gradle plugin** — add a Gradle task that generates code as part of your build.
+
+**Docker** — run the generator without installing Java or any runtime dependencies.
+
+**Online API** — use the hosted REST API or self-hosted Docker image to generate code on demand via HTTP.
+
+## Spec compatibility
+
+| OpenAPI Spec Version | Support |
+| -------------------- | ------- |
+| 1.0, 1.1, 1.2 | Supported |
+| 2.0 (Swagger) | Supported |
+| 3.0 | Supported |
+| 3.1 | Beta support |
+
+<Warning>
+  If your OpenAPI spec, templates, or any input is obtained from an untrusted source, review all inputs before running the generator to avoid potential code injection vulnerabilities. For security issues, contact [team@openapitools.org](mailto:team@openapitools.org).
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install the CLI using npm, Homebrew, Docker, or any other method.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Generate your first API client or server stub in under 5 minutes.
+  </Card>
+  <Card title="Generator list" icon="list" href="/generators/index">
+    Browse every available client, server, and documentation generator.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/usage/cli">
+    Explore all commands, flags, and options available in the CLI.
+  </Card>
+</CardGroup>

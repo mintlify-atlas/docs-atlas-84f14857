@@ -1,0 +1,361 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about OpenAPI Generator — general usage, generators, extending, and contributing."
+---
+
+## General
+
+<AccordionGroup>
+  <Accordion title="Do you have a chat room?">
+    Yes, the community uses Slack. You can join at:
+
+    [https://join.slack.com/t/openapi-generator/shared_invite/zt-36ucx4ybl-jYrN6euoYn6zxXNZdldoZA](https://join.slack.com/t/openapi-generator/shared_invite/zt-36ucx4ybl-jYrN6euoYn6zxXNZdldoZA)
+  </Accordion>
+
+  <Accordion title="What is the governance structure of the OpenAPI Generator project?">
+    OpenAPI Generator is managed by the members of the [core team](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/core-team.md). Decisions are made collaboratively by the community and core team members.
+  </Accordion>
+
+  <Accordion title="What is the difference between Swagger Codegen and OpenAPI Generator?">
+    Swagger Codegen is driven by SmartBear while OpenAPI Generator is driven by the community. More than 40 top contributors and template creators of Swagger Codegen joined OpenAPI Generator as founding team members.
+
+    For more details, see the [migration guide](/migration-from-swagger-codegen).
+
+    <Note>
+      Swagger is a trademark owned by SmartBear. Use of the term "Swagger" in this project is for reference purposes only.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Why was OpenAPI Generator forked from Swagger Codegen?">
+    There are several reasons:
+
+    1. The founding members felt that Swagger Codegen 3.0.0 was diverging too much from the philosophy of Swagger Codegen 2.x.
+    2. The founding members were concerned that maintaining two separate branches (2.x and 3.x) would create issues similar to those seen in the Python community.
+    3. The founding members wanted a more rapid release cycle (weekly patch releases, monthly minor releases) so users do not need to wait months for a stable release.
+    4. A community-driven version allows for innovation, reliability, and a roadmap owned by the community.
+  </Accordion>
+
+  <Accordion title="Are there any changes to the project license?">
+    No. OpenAPI Generator still uses the [Apache License, version 2](https://www.apache.org/licenses/LICENSE-2.0).
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Generators
+
+<AccordionGroup>
+  <Accordion title="What are some server generator use cases?">
+    OpenAPI Generator includes 40+ server generators, with more added regularly. These include Spring (Java and Kotlin), Finch and Scalatra (Scala), and ASP.NET and Azure Functions (C#).
+
+    Common use cases for server generators:
+
+    - **Prototyping** — generate a functional API backend quickly to try different features.
+    - **Mocking** — provide an API backend for mocking based on the `examples` field defined in response objects.
+    - **Migration** — migrating an API backend from one language or framework to another. The server generator can save significant time in implementing and verifying each endpoint.
+    - **Evaluating** — when you want to try a new language or framework and a simple "Hello, World" is too trivial.
+  </Accordion>
+
+  <Accordion title="Java: The API client has SSL errors due to an invalid certificate. Is there a way to bypass that?">
+    Yes. See the workaround at [http://stackoverflow.com/a/6055903/677735](http://stackoverflow.com/a/6055903/677735).
+  </Accordion>
+
+  <Accordion title="Java: How can I customize the Feign client templates?">
+    Provide customized files in `Java/libraries/feign` under the resources folder and pass the location via the `-t` option.
+
+    In your Gradle build script, add the following:
+
+    ```groovy
+    config.templateDir = 'src/openapi-generator-templates/Java/libraries/feign'
+    ```
+  </Accordion>
+
+  <Accordion title="Android: How can I generate an Android SDK?">
+    The Java SDK is also compatible with Android.
+
+    To generate the Java SDK with `okhttp` and `gson` (recommended):
+
+    ```bash
+    mvn clean package
+    java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar generate \
+      -i https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.json \
+      -l java --library=okhttp-gson \
+      --additional-properties hideGenerationTimestamp=true \
+      -o /var/tmp/java/okhttp-gson/
+    ```
+
+    To list all supported HTTP libraries:
+
+    ```bash
+    java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar config-help -l java
+    ```
+
+    To generate the Android SDK with [`volley`](https://github.com/mcxiaoke/android-volley):
+
+    ```bash
+    mvn clean package
+    java -jar modules/openapi-generator-cli/target/openapi-generator-cli.jar generate \
+      -i https://raw.githubusercontent.com/OpenAPITools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.json \
+      -l android --library=volley \
+      -o /var/tmp/android/volley/
+    ```
+
+    <Warning>
+      The default HTTP library (Apache HttpClient) with `android` is not actively maintained and is not recommended.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="C#: How do I fix `CSC: warning CS2002` in Xamarin?">
+    The full warning looks like: `CSC: warning CS2002: Source file 'Api/FakeApi.cs' specified multiple times`
+
+    This warning has no impact on the build process — you can build the solution without issue. The warning is expected to be addressed in an upcoming stable release of Xamarin.
+  </Accordion>
+
+  <Accordion title="Objective-C: How do I run integration tests with the Petstore ObjC API client?">
+    ```bash
+    git clone https://github.com/openapitools/openapi-generator.git
+    cd openapi-generator/samples/client/petstore/objc/default/OpenAPIClientTests
+    mvn integration-test
+    ```
+
+    Besides the `default` ObjC client, there is also a `core-data` variant with [Core Data support](https://en.wikipedia.org/wiki/Core_Data).
+  </Accordion>
+
+  <Accordion title="Swift: Which Swift generator is actively maintained?">
+    Use the `swift5` or `swift6` generator. Swift 4.x is deprecated.
+
+    The `swift6` generator is now stable — try it and share your feedback.
+  </Accordion>
+
+  <Accordion title="Swift: How do I run integration tests with the Petstore Swift API client?">
+    ```bash
+    git clone https://github.com/openapitools/openapi-generator.git
+    cd openapi-generator/samples/client/petstore/swift/default/OpenAPIClientTests
+    mvn integration-test
+    ```
+  </Accordion>
+
+  <Accordion title="Swift: How do I implement bearer token authentication with URLSession on the Swift 5 API client?">
+    First, subclass `RequestBuilderFactory`:
+
+    ```swift
+    class BearerRequestBuilderFactory: RequestBuilderFactory {
+        func getNonDecodableBuilder<T>() -> RequestBuilder<T>.Type {
+            BearerRequestBuilder<T>.self
+        }
+
+        func getBuilder<T: Decodable>() -> RequestBuilder<T>.Type {
+            BearerDecodableRequestBuilder<T>.self
+        }
+    }
+    ```
+
+    Then subclass `URLSessionRequestBuilder` and `URLSessionDecodableRequestBuilder` to handle token refresh on 401 responses. Finally, assign the factory:
+
+    ```swift
+    PetstoreClientAPI.requestBuilderFactory = BearerRequestBuilderFactory()
+    ```
+
+    See the working samples:
+    - [AppDelegate.swift](https://github.com/OpenAPITools/openapi-generator/blob/master/samples/client/petstore/swift5/urlsessionLibrary/SwaggerClientTests/SwaggerClient/AppDelegate.swift)
+    - [BearerDecodableRequestBuilder.swift](https://github.com/OpenAPITools/openapi-generator/blob/master/samples/client/petstore/swift5/urlsessionLibrary/SwaggerClientTests/SwaggerClient/BearerDecodableRequestBuilder.swift)
+  </Accordion>
+
+  <Accordion title="Swift: How do I implement bearer token authentication with URLSession on the Swift 6 API client?">
+    Implement the `OpenAPIInterceptor` protocol:
+
+    ```swift
+    public class BearerOpenAPIInterceptor: OpenAPIInterceptor {
+        public init() {}
+
+        public func intercept<T>(
+            urlRequest: URLRequest,
+            urlSession: URLSessionProtocol,
+            requestBuilder: RequestBuilder<T>,
+            completion: @escaping (Result<URLRequest, any Error>) -> Void
+        ) {
+            guard requestBuilder.requiresAuthentication else {
+                completion(.success(urlRequest))
+                return
+            }
+
+            refreshTokenIfDoesntExist { token in
+                var newUrlRequest = urlRequest
+                newUrlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                requestBuilder.openAPIClient.customHeaders["Authorization"] = "Bearer \(token)"
+                completion(.success(newUrlRequest))
+            }
+        }
+
+        // Implement retry(...) for 401 handling
+    }
+    ```
+
+    Then assign the interceptor:
+
+    ```swift
+    OpenAPIClient.shared.interceptor = BearerOpenAPIInterceptor()
+    ```
+  </Accordion>
+
+  <Accordion title="Swift: How do I migrate from the Swift 5 generator to the Swift 6 generator?">
+    - Change the generator to `swift6`, e.g.:
+
+      ```bash
+      openapi-generator generate \
+        -i https://raw.githubusercontent.com/openapitools/openapi-generator/master/modules/openapi-generator/src/test/resources/3_0/petstore.yaml \
+        -g swift6 \
+        -o /tmp/test/
+      ```
+
+    - Infrastructure files have moved to a new `Infrastructure` directory. Delete the old ones.
+    - `AnyCodable` dependency is removed and replaced with a new `JSONValue` enum — no external dependencies required.
+    - The `Combine` response is now deferred by default. To restore previous behavior, set `combineDeferred` to `false`.
+    - A new `apiStaticMethod` config allows using instance methods instead of class methods.
+    - The default response is based on async/await. To revert, set `responseAs` to `ObjcBlock`.
+    - The default project structure now follows SPM. To revert, set `useSPMFileStructure` to `false`.
+    - `{{projectName}}API` is now called `{{projectName}}APIConfiguration`.
+    - `JSONEncodable` protocol was renamed to `ParameterConvertible`; the `useJSONEncodable` flag was renamed to `useParameterConvertible`.
+    - Set a request interceptor via `OpenAPIClient.shared.interceptor` to manage authenticated requests.
+  </Accordion>
+
+  <Accordion title="TypeScript: How do I keep original property names instead of camelCase?">
+    Use the `modelPropertyNaming` option when generating TypeScript clients:
+
+    ```text
+    modelPropertyNaming
+        Naming convention for the property: 'camelCase', 'PascalCase',
+        'snake_case' and 'original', which keeps the original name
+        (Default: camelCase)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Extending and customizing
+
+<AccordionGroup>
+  <Accordion title="How do I use my own Java models?">
+    See the [Bringing your own Models](/customization/custom-generator) section in the customization documentation.
+  </Accordion>
+
+  <Accordion title="How do I disable certificate verification?">
+    Add the following JVM option when generating code:
+
+    ```bash
+    -Dio.swagger.v3.parser.util.RemoteUrl.trustAll=true
+    ```
+  </Accordion>
+
+  <Accordion title="How do I skip files during code generation?">
+    OpenAPI Generator has a built-in ignore file processor. Create a file named `.openapi-generator-ignore` in the root of your output directory:
+
+    ```text
+    # Prevent generator from creating these files:
+    git_push.sh
+    ```
+
+    The ignore file works like `.gitignore` and is auto-generated by default.
+
+    If you need this on initial generation, use the `--ignore-file-override` option (CLI) or `ignoreFileOverride` (Maven and Gradle plugins) pointing to an existing file. Its contents are evaluated relative to the output directory.
+  </Accordion>
+
+  <Accordion title="How can I customize the auto-generated code?">
+    This covers questions like:
+
+    - "How can I add a header/footer to generated code?"
+    - "How can I add my own logging to generated code?"
+    - "How can I add my license to the top of files?"
+
+    OpenAPI Generator supports user-defined templates without needing to recompile the artifact. Custom generators (templates and logic) are also supported if they are accessible on the classpath.
+
+    See the [templating](/customization/templating) and [customization](/customization/custom-generator) docs for details.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Contributing
+
+<AccordionGroup>
+  <Accordion title="Automated checks on my PR have failed. What should I do?">
+    - Click on the failed tests and check the log to see what is causing the errors.
+    - If it is a connection timeout when downloading dependencies, close and reopen the PR to restart the CI jobs.
+    - For any other reason, tag someone on the [core team](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/core-team.md) for assistance.
+  </Accordion>
+
+  <Accordion title="The public Petstore server returns status 500. Can I run it locally?">
+    Yes. Run the following commands (requires Docker):
+
+    ```bash
+    docker pull swaggerapi/petstore
+    docker run -d \
+      -e SWAGGER_HOST=http://petstore.swagger.io \
+      -e SWAGGER_BASE_PATH=/v2 \
+      -p 80:8080 \
+      swaggerapi/petstore
+    docker ps -a
+    ```
+
+    Then add the following to your local [hosts file](https://en.wikipedia.org/wiki/Hosts_%28file%29):
+
+    ```text
+    127.0.0.1    petstore.swagger.io
+    ```
+  </Accordion>
+
+  <Accordion title="Who should I report a security vulnerability to?">
+    Contact [team@openapitools.org](mailto:team@openapitools.org) with the details and the team will follow up with you.
+  </Accordion>
+
+  <Accordion title="How can I rebase my PR on the latest master?">
+    Run the following steps (assuming your PR branch is `fix_issue_9999`):
+
+    ```bash
+    git checkout master
+    git pull upstream master
+    git checkout fix_issue_9999
+    git rebase master
+    # Resolve any merge conflicts, then:
+    git commit -a
+    # You may need --force on git push
+    ```
+
+    To set up `upstream` pointing to the official repo:
+
+    ```bash
+    git remote add upstream https://github.com/openapitools/openapi-generator.git
+    ```
+  </Accordion>
+
+  <Accordion title="How can I submit a PR to fix bugs or make enhancements?">
+    <Steps>
+      <Step title="Fork the repository">
+        Visit [https://github.com/openapitools/openapi-generator](https://github.com/openapitools/openapi-generator) and click **Fork** in the upper right corner.
+      </Step>
+      <Step title="Clone and create a branch">
+        ```bash
+        git clone https://github.com/your_user_id/openapi-generator.git
+        cd openapi-generator
+        git checkout -b fix_issue9999
+        ```
+      </Step>
+      <Step title="Make your changes">
+        Edit files, then commit:
+
+        ```bash
+        git commit -a
+        git push origin fix_issue9999
+        ```
+      </Step>
+      <Step title="Open a pull request">
+        Visit [https://github.com/openapitools/openapi-generator](https://github.com/openapitools/openapi-generator) and click the button to file a new PR based on your branch.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="How can I update commits that are not linked to my GitHub account?">
+    Either update the commit author (see [Stack Overflow](https://stackoverflow.com/questions/3042437/how-to-change-the-commit-author-for-one-specific-commit)) or add the email address used in the commit as a secondary email in your GitHub account settings.
+  </Accordion>
+</AccordionGroup>

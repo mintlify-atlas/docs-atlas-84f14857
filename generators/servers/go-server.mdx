@@ -1,0 +1,224 @@
+---
+title: Go server generators
+description: Generate Go HTTP server stubs from an OpenAPI specification using the go-server or go-gin-server generators.
+---
+
+OpenAPI Generator provides two Go server generators:
+
+- **`go-server`** — uses the standard `net/http` package with either `gorilla/mux` or `go-chi/chi` as the router. Stability: **STABLE**.
+- **`go-gin-server`** — uses the [Gin](https://gin-gonic.com/) web framework. Stability: **STABLE**.
+
+## Choosing a generator
+
+| | `go-server` | `go-gin-server` |
+|--|--|--|
+| Router | `gorilla/mux` or `chi` (configurable) | Gin |
+| Middleware ecosystem | Standard `net/http` | Gin-specific |
+| CORS support | Yes (`featureCORS`) | No built-in option |
+| Interface-only mode | No (`onlyInterfaces`) | Yes (`interfaceOnly`) |
+| Output as library | Yes (`outputAsLibrary`) | No |
+| Stability | STABLE | STABLE |
+
+## go-server
+
+### Quick start
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    npm install -g @openapitools/openapi-generator-cli
+    ```
+  </Step>
+  <Step title="Generate the server">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g go-server \
+      -o ./my-go-server \
+      --additional-properties=packageName=myapi,serverPort=8080
+    ```
+  </Step>
+  <Step title="Run the server">
+    ```bash
+    cd my-go-server
+    go run go/main.go
+    ```
+  </Step>
+  <Step title="Implement your services">
+    Edit the generated `*ServiceImplService.go` files (in the `go/` directory) and replace the stub return values with real logic.
+  </Step>
+</Steps>
+
+### Generated project structure
+
+```
+my-go-server/
+├── go.mod
+├── Dockerfile
+└── go/
+    ├── main.go                       # entry point
+    ├── api.go                        # shared types
+    ├── api_pet.go                    # generated interface
+    ├── api_pet_service.go            # stub service (edit this)
+    ├── model_pet.go                  # model struct
+    ├── routers.go                    # route registration
+    └── logger.go
+```
+
+### Configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `packageName` | string | `openapi` | Go package name (lowercase) |
+| `packageVersion` | string | `1.0.0` | Go module version |
+| `router` | string | `mux` | Router to use: `mux` (gorilla/mux) or `chi` |
+| `serverPort` | integer | `8080` | Port the server binds to |
+| `sourceFolder` | string | `go` | Directory for generated Go source |
+| `featureCORS` | boolean | `false` | Enable CORS middleware |
+| `onlyInterfaces` | boolean | `false` | Exclude default service implementations; generate interfaces only |
+| `outputAsLibrary` | boolean | `false` | Exclude `main.go`, `go.mod`, and `Dockerfile` |
+| `addResponseHeaders` | boolean | `false` | Include response headers in `ImplResponse` |
+| `enumClassPrefix` | boolean | `false` | Prefix enum values with the enum type name |
+| `hideGenerationTimestamp` | boolean | `true` | Suppress generation timestamp in files |
+
+### Example: use chi router
+
+```bash
+openapi-generator-cli generate \
+  -g go-server \
+  -i openapi.yaml \
+  -o ./server \
+  --additional-properties=router=chi,packageName=petstore
+```
+
+### Example: library mode (no main)
+
+Use `outputAsLibrary=true` when embedding the generated code in an existing Go module:
+
+```bash
+openapi-generator-cli generate \
+  -g go-server \
+  -i openapi.yaml \
+  -o ./server \
+  --additional-properties=outputAsLibrary=true
+```
+
+### Implementing a service
+
+The generated interface in `api_pet.go`:
+
+```go
+// PetAPIServicer defines the interface for pet operations
+type PetAPIServicer interface {
+    GetPetById(ctx context.Context, petId int64) (ImplResponse, error)
+    AddPet(ctx context.Context, pet Pet) (ImplResponse, error)
+}
+```
+
+The stub in `api_pet_service.go` (edit this file):
+
+```go
+func (s *PetAPIService) GetPetById(ctx context.Context, petId int64) (ImplResponse, error) {
+    // TODO: add your business logic here
+    return Response(http.StatusOK, Pet{ Id: petId, Name: "Fluffy" }), nil
+}
+```
+
+---
+
+## go-gin-server
+
+### Quick start
+
+<Steps>
+  <Step title="Generate the server">
+    ```bash
+    openapi-generator-cli generate \
+      -i openapi.yaml \
+      -g go-gin-server \
+      -o ./my-gin-server \
+      --additional-properties=packageName=myapi,serverPort=8080
+    ```
+  </Step>
+  <Step title="Run the server">
+    ```bash
+    cd my-gin-server
+    go run go/main.go
+    ```
+  </Step>
+  <Step title="Implement your services">
+    Edit the service implementation files in `go/` to replace stub responses.
+  </Step>
+</Steps>
+
+### Generated project structure
+
+```
+my-gin-server/
+├── go.mod
+├── Dockerfile
+└── go/
+    ├── main.go                       # entry point with Gin engine setup
+    ├── routers.go                    # Gin route registration
+    ├── api_pet.go                    # controller functions
+    ├── model_pet.go                  # model structs
+    └── service_pet.go                # stub service (edit this)
+```
+
+### Configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `packageName` | string | `openapi` | Go package name (lowercase) |
+| `packageVersion` | string | `1.0.0` | Go module version |
+| `serverPort` | integer | `8080` | Port the server binds to |
+| `apiPath` | string | `go` | Folder containing the Go source |
+| `interfaceOnly` | boolean | `false` | Generate only API interface stubs without implementations |
+| `enumClassPrefix` | boolean | `false` | Prefix enum values with the enum type name |
+| `hideGenerationTimestamp` | boolean | `true` | Suppress generation timestamp in files |
+
+### Interface-only mode
+
+```bash
+openapi-generator-cli generate \
+  -g go-gin-server \
+  -i openapi.yaml \
+  -o ./server \
+  --additional-properties=interfaceOnly=true
+```
+
+### Implementing a handler
+
+Generated controller in `api_pet.go`:
+
+```go
+func GetPetById(c *gin.Context) {
+    petIdStr := c.Param("petId")
+    petId, err := strconv.ParseInt(petIdStr, 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid petId"})
+        return
+    }
+    result, err := service.GetPetById(petId)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, result)
+}
+```
+
+## Configuration file example
+
+```yaml
+generatorName: go-server
+inputSpec: openapi.yaml
+outputDir: ./server
+
+additionalProperties:
+  packageName: petstore
+  packageVersion: 1.0.0
+  router: chi
+  serverPort: 9090
+  featureCORS: true
+```
